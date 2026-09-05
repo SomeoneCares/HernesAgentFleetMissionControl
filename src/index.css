@@ -1,0 +1,457 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-app, #07090e);
+    color: var(--text-main, #ffffff);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+/* =========================================
+   SKIN THEME DEFINITIONS & OVERRIDES
+   ========================================= */
+
+/* 1. HERMES CYBER (DEFAULT) */
+:root, [data-theme="hermes-cyber"] {
+  --bg-app: #07090e;
+  --bg-card: #101622;
+  --bg-panel: #0b0f19;
+  --accent: #4cd7f6;
+  --accent-muted: #22d3ee;
+  --accent-glow: rgba(76, 215, 246, 0.35);
+  --text-main: #ffffff;
+}
+
+/* 2. TACTICAL EMERALD (MATRIX PHOSPHOR GREEN) */
+[data-theme="tactical-emerald"] {
+  --bg-app: #040805;
+  --bg-card: #09120c;
+  --bg-panel: #060d08;
+  --accent: #00ff66;
+  --accent-muted: #10b981;
+  --accent-glow: rgba(0, 255, 102, 0.35);
+  --text-main: #ecfdf5;
+}
+
+[data-theme="tactical-emerald"] .bg-\[\#07090e\],
+[data-theme="tactical-emerald"] .bg-\[\#07090e\]\/85,
+[data-theme="tactical-emerald"] .bg-\[\#07090e\]\/70,
+[data-theme="tactical-emerald"] .bg-\[\#07090e\]\/75,
+[data-theme="tactical-emerald"] .bg-\[\#07090e\]\/40 {
+  background-color: #040805 !important;
+}
+
+[data-theme="tactical-emerald"] .bg-\[\#101622\],
+[data-theme="tactical-emerald"] .bg-\[\#101622\]\/65,
+[data-theme="tactical-emerald"] .bg-\[\#101622\]\/80,
+[data-theme="tactical-emerald"] .bg-\[\#101622\]\/90 {
+  background-color: #09120c !important;
+  border-color: rgba(16, 185, 129, 0.18) !important;
+}
+
+[data-theme="tactical-emerald"] .bg-\[\#0b0f19\],
+[data-theme="tactical-emerald"] .bg-\[\#0b0f19\]\/70,
+[data-theme="tactical-emerald"] .bg-\[\#0b0f19\]\/80 {
+  background-color: #060d08 !important;
+  border-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+[data-theme="tactical-emerald"] .bg-\[\#0c101a\],
+[data-theme="tactical-emerald"] .bg-\[\#0c101a\]\/95,
+[data-theme="tactical-emerald"] .bg-\[\#0c101a\]\/70 {
+  background-color: #080f0a !important;
+}
+
+[data-theme="tactical-emerald"] .text-cyan-400,
+[data-theme="tactical-emerald"] .text-cyan-300 {
+  color: #00ff66 !important;
+}
+
+[data-theme="tactical-emerald"] .bg-cyan-400,
+[data-theme="tactical-emerald"] .bg-cyan-300 {
+  background-color: #00ff66 !important;
+  color: #040805 !important;
+}
+
+[data-theme="tactical-emerald"] .from-cyan-400 {
+  --tw-gradient-from: #00ff66 var(--tw-gradient-from-position) !important;
+}
+[data-theme="tactical-emerald"] .to-cyan-300 {
+  --tw-gradient-to: #10b981 var(--tw-gradient-to-position) !important;
+}
+
+[data-theme="tactical-emerald"] .border-cyan-400,
+[data-theme="tactical-emerald"] .border-cyan-400\/20,
+[data-theme="tactical-emerald"] .border-cyan-400\/25,
+[data-theme="tactical-emerald"] .border-cyan-400\/30,
+[data-theme="tactical-emerald"] .border-cyan-400\/40,
+[data-theme="tactical-emerald"] .border-cyan-400\/50 {
+  border-color: rgba(0, 255, 102, 0.35) !important;
+}
+
+[data-theme="tactical-emerald"] .bg-cyan-400\/10,
+[data-theme="tactical-emerald"] .bg-cyan-400\/15,
+[data-theme="tactical-emerald"] .bg-cyan-400\/20,
+[data-theme="tactical-emerald"] .bg-cyan-500\/10 {
+  background-color: rgba(0, 255, 102, 0.12) !important;
+}
+
+/* 3. SOLAR AMBER (NEUROMANCER INDUSTRIAL GOLD) */
+[data-theme="solar-amber"] {
+  --bg-app: #0c0a09;
+  --bg-card: #171310;
+  --bg-panel: #110e0b;
+  --accent: #f59e0b;
+  --accent-muted: #fbbf24;
+  --accent-glow: rgba(245, 158, 11, 0.35);
+  --text-main: #fffbeb;
+}
+
+[data-theme="solar-amber"] .bg-\[\#07090e\],
+[data-theme="solar-amber"] .bg-\[\#07090e\]\/85,
+[data-theme="solar-amber"] .bg-\[\#07090e\]\/70,
+[data-theme="solar-amber"] .bg-\[\#07090e\]\/75,
+[data-theme="solar-amber"] .bg-\[\#07090e\]\/40 {
+  background-color: #0c0a09 !important;
+}
+
+[data-theme="solar-amber"] .bg-\[\#101622\],
+[data-theme="solar-amber"] .bg-\[\#101622\]\/65,
+[data-theme="solar-amber"] .bg-\[\#101622\]\/80,
+[data-theme="solar-amber"] .bg-\[\#101622\]\/90 {
+  background-color: #171310 !important;
+  border-color: rgba(245, 158, 11, 0.18) !important;
+}
+
+[data-theme="solar-amber"] .bg-\[\#0b0f19\],
+[data-theme="solar-amber"] .bg-\[\#0b0f19\]\/70,
+[data-theme="solar-amber"] .bg-\[\#0b0f19\]\/80 {
+  background-color: #110e0b !important;
+  border-color: rgba(245, 158, 11, 0.14) !important;
+}
+
+[data-theme="solar-amber"] .bg-\[\#0c101a\],
+[data-theme="solar-amber"] .bg-\[\#0c101a\]\/95,
+[data-theme="solar-amber"] .bg-\[\#0c101a\]\/70 {
+  background-color: #14100c !important;
+}
+
+[data-theme="solar-amber"] .text-cyan-400,
+[data-theme="solar-amber"] .text-cyan-300 {
+  color: #fbbf24 !important;
+}
+
+[data-theme="solar-amber"] .bg-cyan-400,
+[data-theme="solar-amber"] .bg-cyan-300 {
+  background-color: #f59e0b !important;
+  color: #0c0a09 !important;
+}
+
+[data-theme="solar-amber"] .from-cyan-400 {
+  --tw-gradient-from: #f59e0b var(--tw-gradient-from-position) !important;
+}
+[data-theme="solar-amber"] .to-cyan-300 {
+  --tw-gradient-to: #fbbf24 var(--tw-gradient-to-position) !important;
+}
+
+[data-theme="solar-amber"] .border-cyan-400,
+[data-theme="solar-amber"] .border-cyan-400\/20,
+[data-theme="solar-amber"] .border-cyan-400\/25,
+[data-theme="solar-amber"] .border-cyan-400\/30,
+[data-theme="solar-amber"] .border-cyan-400\/40,
+[data-theme="solar-amber"] .border-cyan-400\/50 {
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+[data-theme="solar-amber"] .bg-cyan-400\/10,
+[data-theme="solar-amber"] .bg-cyan-400\/15,
+[data-theme="solar-amber"] .bg-cyan-400\/20,
+[data-theme="solar-amber"] .bg-cyan-500\/10 {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+}
+
+/* 4. SUNSET SYNTHWAVE (NEON FUCHSIA & MIDNIGHT VIOLET) */
+[data-theme="sunset-synth"] {
+  --bg-app: #0b0717;
+  --bg-card: #150f28;
+  --bg-panel: #100a20;
+  --accent: #f43f5e;
+  --accent-muted: #fb7185;
+  --accent-glow: rgba(244, 63, 94, 0.35);
+  --text-main: #fff1f2;
+}
+
+[data-theme="sunset-synth"] .bg-\[\#07090e\],
+[data-theme="sunset-synth"] .bg-\[\#07090e\]\/85,
+[data-theme="sunset-synth"] .bg-\[\#07090e\]\/70,
+[data-theme="sunset-synth"] .bg-\[\#07090e\]\/75,
+[data-theme="sunset-synth"] .bg-\[\#07090e\]\/40 {
+  background-color: #0b0717 !important;
+}
+
+[data-theme="sunset-synth"] .bg-\[\#101622\],
+[data-theme="sunset-synth"] .bg-\[\#101622\]\/65,
+[data-theme="sunset-synth"] .bg-\[\#101622\]\/80,
+[data-theme="sunset-synth"] .bg-\[\#101622\]\/90 {
+  background-color: #150f28 !important;
+  border-color: rgba(244, 63, 94, 0.18) !important;
+}
+
+[data-theme="sunset-synth"] .bg-\[\#0b0f19\],
+[data-theme="sunset-synth"] .bg-\[\#0b0f19\]\/70,
+[data-theme="sunset-synth"] .bg-\[\#0b0f19\]\/80 {
+  background-color: #100a20 !important;
+  border-color: rgba(244, 63, 94, 0.14) !important;
+}
+
+[data-theme="sunset-synth"] .bg-\[\#0c101a\],
+[data-theme="sunset-synth"] .bg-\[\#0c101a\]\/95,
+[data-theme="sunset-synth"] .bg-\[\#0c101a\]\/70 {
+  background-color: #120c24 !important;
+}
+
+[data-theme="sunset-synth"] .text-cyan-400,
+[data-theme="sunset-synth"] .text-cyan-300 {
+  color: #fb7185 !important;
+}
+
+[data-theme="sunset-synth"] .bg-cyan-400,
+[data-theme="sunset-synth"] .bg-cyan-300 {
+  background-color: #f43f5e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="sunset-synth"] .from-cyan-400 {
+  --tw-gradient-from: #f43f5e var(--tw-gradient-from-position) !important;
+}
+[data-theme="sunset-synth"] .to-cyan-300 {
+  --tw-gradient-to: #c084fc var(--tw-gradient-to-position) !important;
+}
+
+[data-theme="sunset-synth"] .border-cyan-400,
+[data-theme="sunset-synth"] .border-cyan-400\/20,
+[data-theme="sunset-synth"] .border-cyan-400\/25,
+[data-theme="sunset-synth"] .border-cyan-400\/30,
+[data-theme="sunset-synth"] .border-cyan-400\/40,
+[data-theme="sunset-synth"] .border-cyan-400\/50 {
+  border-color: rgba(244, 63, 94, 0.35) !important;
+}
+
+[data-theme="sunset-synth"] .bg-cyan-400\/10,
+[data-theme="sunset-synth"] .bg-cyan-400\/15,
+[data-theme="sunset-synth"] .bg-cyan-400\/20,
+[data-theme="sunset-synth"] .bg-cyan-500\/10 {
+  background-color: rgba(244, 63, 94, 0.14) !important;
+}
+
+/* 5. OLED MONOLITH (PITCH BLACK OLED & TITANIUM ICE BLUE) */
+[data-theme="oled-monolith"] {
+  --bg-app: #000000;
+  --bg-card: #0a0a0a;
+  --bg-panel: #050505;
+  --accent: #38bdf8;
+  --accent-muted: #7dd3fc;
+  --accent-glow: rgba(56, 189, 248, 0.3);
+  --text-main: #f8fafc;
+}
+
+[data-theme="oled-monolith"] .bg-\[\#07090e\],
+[data-theme="oled-monolith"] .bg-\[\#07090e\]\/85,
+[data-theme="oled-monolith"] .bg-\[\#07090e\]\/70,
+[data-theme="oled-monolith"] .bg-\[\#07090e\]\/75,
+[data-theme="oled-monolith"] .bg-\[\#07090e\]\/40 {
+  background-color: #000000 !important;
+}
+
+[data-theme="oled-monolith"] .bg-\[\#101622\],
+[data-theme="oled-monolith"] .bg-\[\#101622\]\/65,
+[data-theme="oled-monolith"] .bg-\[\#101622\]\/80,
+[data-theme="oled-monolith"] .bg-\[\#101622\]\/90 {
+  background-color: #0a0a0a !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="oled-monolith"] .bg-\[\#0b0f19\],
+[data-theme="oled-monolith"] .bg-\[\#0b0f19\]\/70,
+[data-theme="oled-monolith"] .bg-\[\#0b0f19\]\/80 {
+  background-color: #050505 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="oled-monolith"] .bg-\[\#0c101a\],
+[data-theme="oled-monolith"] .bg-\[\#0c101a\]\/95,
+[data-theme="oled-monolith"] .bg-\[\#0c101a\]\/70 {
+  background-color: #080808 !important;
+}
+
+[data-theme="oled-monolith"] .text-cyan-400,
+[data-theme="oled-monolith"] .text-cyan-300 {
+  color: #38bdf8 !important;
+}
+
+[data-theme="oled-monolith"] .bg-cyan-400,
+[data-theme="oled-monolith"] .bg-cyan-300 {
+  background-color: #38bdf8 !important;
+  color: #000000 !important;
+}
+
+/* 6. ALPINE DAYLIGHT (ARCHITECTURAL CRISP WHITE EXECUTIVE LIGHT MODE) */
+[data-theme="alpine-daylight"] {
+  --bg-app: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-panel: #f8fafc;
+  --accent: #2563eb;
+  --accent-muted: #0284c7;
+  --accent-glow: rgba(37, 99, 235, 0.2);
+  --text-main: #0f172a;
+}
+
+[data-theme="alpine-daylight"] .bg-\[\#07090e\],
+[data-theme="alpine-daylight"] .bg-\[\#07090e\]\/85,
+[data-theme="alpine-daylight"] .bg-\[\#07090e\]\/70,
+[data-theme="alpine-daylight"] .bg-\[\#07090e\]\/75,
+[data-theme="alpine-daylight"] .bg-\[\#07090e\]\/40 {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme="alpine-daylight"] .bg-\[\#101622\],
+[data-theme="alpine-daylight"] .bg-\[\#101622\]\/65,
+[data-theme="alpine-daylight"] .bg-\[\#101622\]\/80,
+[data-theme="alpine-daylight"] .bg-\[\#101622\]\/90 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-theme="alpine-daylight"] .bg-\[\#0b0f19\],
+[data-theme="alpine-daylight"] .bg-\[\#0b0f19\]\/70,
+[data-theme="alpine-daylight"] .bg-\[\#0b0f19\]\/80 {
+  background-color: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 2px 10px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="alpine-daylight"] .bg-\[\#0c101a\],
+[data-theme="alpine-daylight"] .bg-\[\#0c101a\]\/95,
+[data-theme="alpine-daylight"] .bg-\[\#0c101a\]\/70 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+[data-theme="alpine-daylight"] .text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="alpine-daylight"] .text-slate-100,
+[data-theme="alpine-daylight"] .text-slate-200 {
+  color: #1e293b !important;
+}
+
+[data-theme="alpine-daylight"] .text-slate-300 {
+  color: #334155 !important;
+}
+
+[data-theme="alpine-daylight"] .text-slate-400 {
+  color: #64748b !important;
+}
+
+[data-theme="alpine-daylight"] .text-cyan-400,
+[data-theme="alpine-daylight"] .text-cyan-300 {
+  color: #2563eb !important;
+}
+
+[data-theme="alpine-daylight"] .bg-cyan-400,
+[data-theme="alpine-daylight"] .bg-cyan-300 {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+[data-theme="alpine-daylight"] .from-cyan-400 {
+  --tw-gradient-from: #2563eb var(--tw-gradient-from-position) !important;
+}
+[data-theme="alpine-daylight"] .to-cyan-300 {
+  --tw-gradient-to: #0284c7 var(--tw-gradient-to-position) !important;
+}
+
+[data-theme="alpine-daylight"] .border-cyan-400,
+[data-theme="alpine-daylight"] .border-cyan-400\/20,
+[data-theme="alpine-daylight"] .border-cyan-400\/25,
+[data-theme="alpine-daylight"] .border-cyan-400\/30,
+[data-theme="alpine-daylight"] .border-cyan-400\/40,
+[data-theme="alpine-daylight"] .border-cyan-400\/50 {
+  border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+[data-theme="alpine-daylight"] .bg-cyan-400\/10,
+[data-theme="alpine-daylight"] .bg-cyan-400\/15,
+[data-theme="alpine-daylight"] .bg-cyan-400\/20,
+[data-theme="alpine-daylight"] .bg-cyan-500\/10 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+[data-theme="alpine-daylight"] .border-white\/\[0\.08\],
+[data-theme="alpine-daylight"] .border-white\/\[0\.07\],
+[data-theme="alpine-daylight"] .border-white\/\[0\.06\],
+[data-theme="alpine-daylight"] .border-white\/\[0\.05\],
+[data-theme="alpine-daylight"] .border-white\/\[0\.1\] {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+[data-theme="alpine-daylight"] .bg-white\/\[0\.02\],
+[data-theme="alpine-daylight"] .bg-white\/\[0\.03\],
+[data-theme="alpine-daylight"] .bg-white\/\[0\.04\],
+[data-theme="alpine-daylight"] .bg-white\/\[0\.05\] {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+[data-theme="alpine-daylight"] .bg-black\/40,
+[data-theme="alpine-daylight"] .bg-black\/50,
+[data-theme="alpine-daylight"] .bg-black\/60 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="alpine-daylight"] input,
+[data-theme="alpine-daylight"] select,
+[data-theme="alpine-daylight"] textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="alpine-daylight"] select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Ambient Radial Mesh */
+.mesh-gradient {
+  background: radial-gradient(circle at 15% 10%, var(--accent-glow, rgba(76, 215, 246, 0.06)) 0%, transparent 50%),
+              radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 45%),
+              radial-gradient(circle at 50% 80%, var(--accent-glow, rgba(76, 215, 246, 0.03)) 0%, transparent 60%);
+}
+
+.glow-accent {
+  box-shadow: 0 0 30px -4px var(--accent-glow, rgba(76, 215, 246, 0.3));
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent, #4cd7f6);
+}
+

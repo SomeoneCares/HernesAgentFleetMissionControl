@@ -1,0 +1,6 @@
+{
+  "name": "Hermes Mission Control",
+  "description": "Multi-tab autonomous agent mission control portal featuring real-time health monitors, inference ledger, agent fleet orchestration, task distribution, and Telegram-style cybernetic comms.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
