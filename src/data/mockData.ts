@@ -1,4 +1,55 @@
-import { Agent, ModelOption, ActivityEvent, TaskItem, ChatMessage, ArtifactItem } from '../types';
+import { Agent, ModelOption, ActivityEvent, TaskItem, ChatMessage, ArtifactItem, Fleet } from '../types';
+
+export const INITIAL_FLEETS: Fleet[] = [
+  {
+    id: 'fleet-alpha-core',
+    name: 'Primary Orchestration Fleet',
+    codename: 'FLEET-ALPHA-CORE',
+    description: 'Master mission control, task decomposition, global telemetry, and multi-agent coordination.',
+    purpose: 'Core Production',
+    status: 'ACTIVE',
+    nodeCluster: 'node-01.us-east.h100 (80GB SXM5)',
+    vramAllocated: '68.4 / 80 GB',
+    defaultModelId: 'hermes-3-405b-instruct',
+    color: '#00f2fe'
+  },
+  {
+    id: 'fleet-dev-synth',
+    name: 'Autonomous Code & Dev Fleet',
+    codename: 'FLEET-DEV-SYNTH',
+    description: 'Full-stack software engineering, AST refactoring, automated testing, and cargo builds.',
+    purpose: 'Autonomous Dev & Code',
+    status: 'ACTIVE',
+    nodeCluster: 'node-02.us-east.h100 (80GB SXM5)',
+    vramAllocated: '52.1 / 80 GB',
+    defaultModelId: 'qwen-2-5-coder-32b',
+    color: '#10b981'
+  },
+  {
+    id: 'fleet-deep-oracle',
+    name: 'Research & Knowledge Oracle',
+    codename: 'FLEET-DEEP-ORACLE',
+    description: 'Multi-hop web crawl, Arxiv technical synthesis, fact validation, and semantic vector graphs.',
+    purpose: 'Research & Synthesis',
+    status: 'ACTIVE',
+    nodeCluster: 'node-03.eu-west.l40s (48GB PCIe)',
+    vramAllocated: '34.8 / 48 GB',
+    defaultModelId: 'hermes-3-70b-fp8',
+    color: '#a855f7'
+  },
+  {
+    id: 'fleet-sec-sentinel',
+    name: 'Zero-Trust Security Sentinel Fleet',
+    codename: 'FLEET-SEC-SENTINEL',
+    description: 'Real-time prompt injection interception, PII masking, host isolation, and adversarial red-teaming.',
+    purpose: 'Security & Infrastructure',
+    status: 'ACTIVE',
+    nodeCluster: 'node-04.us-central.airgap (RTX 6000 Ada)',
+    vramAllocated: '28.2 / 48 GB',
+    defaultModelId: 'hermes-2-pro-8b-guard',
+    color: '#ef4444'
+  }
+];
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   {
@@ -83,15 +134,28 @@ export const AVAILABLE_MODELS: ModelOption[] = [
   }
 ];
 
+export const AGENT_AVATAR_PRESETS = [
+  { id: 'neural-core', name: 'Neural Core Alpha', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80' },
+  { id: 'cyber-dev', name: 'Cyber Dev Synth', url: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=300&q=80' },
+  { id: 'sentinel-blue', name: 'Optic Sentinel', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80' },
+  { id: 'scholar-oracle', name: 'Deep Scholar', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=300&q=80' },
+  { id: 'citation-auditor', name: 'Citation Oracle', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80' },
+  { id: 'infra-watchdog', name: 'Infra Guard', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
+  { id: 'data-weaver', name: 'Data Architect', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
+  { id: 'proxy-guardian', name: 'Zero-Trust Shield', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80' }
+];
+
 export const INITIAL_AGENTS: Agent[] = [
   {
     id: 'hermes-prime',
+    fleetId: 'fleet-alpha-core',
     name: 'Hermes Prime',
     codename: 'Orchestrator-01 // Primary',
     role: 'Master task decomposition and multi-agent coordination pipeline. Directs global token allocations.',
     status: 'ONLINE',
     statusColor: 'tertiary',
     avatarIcon: 'psychology',
+    avatarPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
     description: 'Master task decomposition and multi-agent coordination pipeline. Directs global token allocations.',
     activeModelId: 'hermes-3-405b-instruct',
     latencyLabel: '18ms • US-CORE-DIRECT',
@@ -109,12 +173,14 @@ export const INITIAL_AGENTS: Agent[] = [
   },
   {
     id: 'code-synthesizer',
+    fleetId: 'fleet-dev-synth',
     name: 'CodeSynthesizer',
     codename: 'Agent-02 // Developer',
     role: 'Code generation, automated test synthesis, and continuous pull request reviews across repositories.',
     status: 'BUSY',
     statusColor: 'primary',
     avatarIcon: 'code_blocks',
+    avatarPhoto: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=300&q=80',
     description: 'Code generation, automated test synthesis, and continuous pull request reviews across repositories.',
     activeModelId: 'qwen-2-5-coder-32b',
     latencyLabel: '24ms • LOCAL GPU',
@@ -136,13 +202,39 @@ export const INITIAL_AGENTS: Agent[] = [
     allocationPercent: 29
   },
   {
+    id: 'test-vanguard',
+    fleetId: 'fleet-dev-synth',
+    name: 'TestVanguard',
+    codename: 'Agent-07 // QA Automaton',
+    role: 'End-to-end sandbox validation, regression fuzzing, and API conformance test verification.',
+    status: 'ONLINE',
+    statusColor: 'tertiary',
+    avatarIcon: 'flame',
+    avatarPhoto: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
+    description: 'End-to-end sandbox validation, regression fuzzing, and API conformance test verification.',
+    activeModelId: 'hermes-2-pro-70b',
+    latencyLabel: '9ms • EDGE CORE',
+    contextUsed: 22100,
+    contextTotal: 64000,
+    uptime: '19d 06h',
+    slasHealth: '4 Test Suites Live',
+    memoryArchitecture: ['Vitest Runner', 'Playwright Sandbox', 'Pytest Worker'],
+    assignedTasks: [
+      { id: '#7740', title: 'Running fuzz tests on JSON schema parser', active: true }
+    ],
+    tools: ['sandbox_exec', 'coverage_reporter', 'mock_generator'],
+    allocationPercent: 20
+  },
+  {
     id: 'research-oracle',
+    fleetId: 'fleet-deep-oracle',
     name: 'ResearchOracle',
     codename: 'Agent-03 // Telemetry Scout',
     role: 'Deep web exploration, technical paper synthesis, Arxiv crawling, and competitor telemetry indexation.',
     status: 'ONLINE',
     statusColor: 'tertiary',
     avatarIcon: 'travel_explore',
+    avatarPhoto: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=300&q=80',
     description: 'Deep web exploration, technical paper synthesis, Arxiv crawling, and competitor telemetry indexation.',
     activeModelId: 'hermes-3-70b-fp8',
     latencyLabel: '32ms • HYBRID CLOUD',
@@ -163,13 +255,39 @@ export const INITIAL_AGENTS: Agent[] = [
     allocationPercent: 18
   },
   {
+    id: 'citation-auditor',
+    fleetId: 'fleet-deep-oracle',
+    name: 'CitationAuditor',
+    codename: 'Agent-08 // Arxiv Verifier',
+    role: 'Cross-referencing technical claims against peer-reviewed preprints and generating verifiable BibTeX trees.',
+    status: 'ONLINE',
+    statusColor: 'tertiary',
+    avatarIcon: 'brain',
+    avatarPhoto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80',
+    description: 'Cross-referencing technical claims against peer-reviewed preprints and generating verifiable BibTeX trees.',
+    activeModelId: 'hermes-3-405b-instruct',
+    latencyLabel: '18ms • US-CORE-DIRECT',
+    contextUsed: 31200,
+    contextTotal: 128000,
+    uptime: '11d 14h',
+    slasHealth: '100% Fact-Check Pass',
+    memoryArchitecture: ['Crossref API', 'Semantic Scholar RAG'],
+    assignedTasks: [
+      { id: '#6612', title: 'Validating transformer KV compression math claims', active: true }
+    ],
+    tools: ['doi_resolver', 'bibtex_formatter', 'semantic_cosine_verifier'],
+    allocationPercent: 15
+  },
+  {
     id: 'ops-sentry',
+    fleetId: 'fleet-alpha-core',
     name: 'OpsSentry',
     codename: 'Agent-04 // Infra Watchdog',
     role: 'Infrastructure watchdog, Kubernetes autoscaler, hardware thermal regulation, and node failover monitor.',
     status: 'MONITORING',
     statusColor: 'secondary',
     avatarIcon: 'shield_with_heart',
+    avatarPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
     description: 'Infrastructure watchdog, Kubernetes autoscaler, hardware thermal regulation, and node failover monitor.',
     activeModelId: 'hermes-2-pro-70b',
     latencyLabel: '9ms • EDGE CORE',
@@ -191,12 +309,14 @@ export const INITIAL_AGENTS: Agent[] = [
   },
   {
     id: 'data-weaver',
+    fleetId: 'fleet-alpha-core',
     name: 'DataWeaver',
     codename: 'Agent-05 // Relational Engineer',
     role: 'SQL query optimizer, database schema migration validator, and synthetic training dataset generation.',
     status: 'ONLINE',
     statusColor: 'tertiary',
     avatarIcon: 'database',
+    avatarPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
     description: 'SQL query optimizer, database schema migration validator, and synthetic training dataset generation.',
     activeModelId: 'hermes-3-70b-fp8',
     latencyLabel: '16ms • PG-NODE-DIRECT',
@@ -218,12 +338,14 @@ export const INITIAL_AGENTS: Agent[] = [
   },
   {
     id: 'security-sentinel',
+    fleetId: 'fleet-sec-sentinel',
     name: 'SecuritySentinel',
     codename: 'Agent-06 // Redact & Guard',
     role: 'Real-time prompt injection detection, PII / secret redaction, and semantic output safety verification.',
     status: 'GUARD ACTIVE',
     statusColor: 'error',
     avatarIcon: 'security',
+    avatarPhoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
     description: 'Real-time prompt injection detection, PII / secret redaction, and semantic output safety verification.',
     activeModelId: 'hermes-2-pro-8b-guard',
     latencyLabel: '4ms • ZERO LATENCY',
@@ -319,6 +441,7 @@ export const INITIAL_TASKS: TaskItem[] = [
   {
     id: 'task-1',
     hash: 'E419DF08',
+    fleetId: 'fleet-dev-synth',
     title: 'Optimize vLLM speculative decode attention masks',
     column: 'todo',
     priority: 'P2 · ELEVATED',
@@ -334,6 +457,7 @@ export const INITIAL_TASKS: TaskItem[] = [
   {
     id: 'task-2',
     hash: '76A2BD01',
+    fleetId: 'fleet-alpha-core',
     title: 'Design comprehensive managed SOC Hermes fleet study',
     column: 'inprogress',
     priority: 'P1 · CRITICAL',
@@ -350,6 +474,7 @@ export const INITIAL_TASKS: TaskItem[] = [
   {
     id: 'task-3',
     hash: 'C6A69A39',
+    fleetId: 'fleet-dev-synth',
     title: 'Build modular Managed SOC Hermes installer',
     column: 'inprogress',
     priority: 'P1 · CRITICAL',
@@ -366,6 +491,7 @@ export const INITIAL_TASKS: TaskItem[] = [
   {
     id: 'task-4',
     hash: '0B4EF203',
+    fleetId: 'fleet-dev-synth',
     title: 'Inspect Mission Control task board API/UI',
     column: 'done',
     priority: 'P1 · CRITICAL',
@@ -382,6 +508,7 @@ export const INITIAL_TASKS: TaskItem[] = [
   {
     id: 'task-5',
     hash: '8A272A65',
+    fleetId: 'fleet-alpha-core',
     title: 'Add task-board operating rule to shared fleet protocol',
     column: 'done',
     priority: 'P1 · CRITICAL',
@@ -398,6 +525,7 @@ export const INITIAL_TASKS: TaskItem[] = [
   {
     id: 'task-6',
     hash: '19C4A112',
+    fleetId: 'fleet-alpha-core',
     title: 'Rotate SSL cert pool for edge websocket ingress nodes',
     column: 'done',
     priority: 'P2 · ELEVATED',
@@ -410,6 +538,40 @@ export const INITIAL_TASKS: TaskItem[] = [
     slaText: 'Verified 09:12 UTC',
     slaType: 'verified',
     metaNote: 'SUCCESS'
+  },
+  {
+    id: 'task-7',
+    hash: '3D98A110',
+    fleetId: 'fleet-deep-oracle',
+    title: 'Index 120 Arxiv preprints on inference speculative decoding',
+    column: 'inprogress',
+    priority: 'P2 · ELEVATED',
+    priorityLevel: 'P2',
+    assignedAgent: 'ResearchOracle & CitationAuditor',
+    agentTag: 'Scout',
+    tags: ['#ARXIV', '#RESEARCH'],
+    subtasksCompleted: 1,
+    subtasksTotal: 3,
+    slaText: 'SLA: 18m remaining',
+    slaType: 'fire',
+    metaNote: 'INDEXING'
+  },
+  {
+    id: 'task-8',
+    hash: '5A11F902',
+    fleetId: 'fleet-sec-sentinel',
+    title: 'Execute fuzzing matrix against model tool execution endpoints',
+    column: 'inprogress',
+    priority: 'P1 · CRITICAL',
+    priorityLevel: 'P1',
+    assignedAgent: 'SecuritySentinel',
+    agentTag: 'Security',
+    tags: ['#REDTEAM', '#ZERO-TRUST'],
+    subtasksCompleted: 4,
+    subtasksTotal: 5,
+    slaText: 'Active Fuzzer Run',
+    slaType: 'fire',
+    metaNote: 'ISOLATED'
   }
 ];
 

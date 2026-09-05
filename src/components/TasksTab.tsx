@@ -16,11 +16,12 @@ import {
   Move,
   Activity,
   Zap,
-  Info
+  Info,
+  Layers
 } from 'lucide-react';
 
 export const TasksTab: React.FC = () => {
-  const { tasks, moveTask, createTask, agents } = useCluster();
+  const { tasks, moveTask, createTask, agents, fleets, activeFleetId, setActiveFleetId } = useCluster();
   const [searchQuery, setSearchQuery] = useState('');
   const [agentFilter, setAgentFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,7 +34,8 @@ export const TasksTab: React.FC = () => {
                           t.hash.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           t.assignedAgent.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesAgent = agentFilter === 'ALL' || t.agentTag.toLowerCase() === agentFilter.toLowerCase();
-    return matchesSearch && matchesAgent;
+    const matchesFleet = activeFleetId === 'all' || (t.fleetId || 'fleet-alpha-core') === activeFleetId;
+    return matchesSearch && matchesAgent && matchesFleet;
   });
 
   const todoTasks = filteredTasks.filter(t => t.column === 'todo');
@@ -139,6 +141,44 @@ export const TasksTab: React.FC = () => {
         </div>
       </section>
 
+      {/* Fleet Filter Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 font-mono text-xs">
+        <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mr-1 flex items-center gap-1.5 shrink-0">
+          <Layers className="w-3.5 h-3.5 text-cyan-400" />
+          Hosted Fleet:
+        </span>
+        <button
+          onClick={() => setActiveFleetId('all')}
+          className={`px-3 py-1.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+            activeFleetId === 'all'
+              ? 'bg-cyan-400/20 text-cyan-200 border-cyan-400/50 shadow-[0_0_12px_rgba(76,215,246,0.3)] font-semibold'
+              : 'bg-white/[0.02] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white'
+          }`}
+        >
+          All Fleets ({tasks.length})
+        </button>
+        {fleets.map(f => {
+          const count = tasks.filter(t => (t.fleetId || 'fleet-alpha-core') === f.id).length;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setActiveFleetId(f.id)}
+              className={`px-3 py-1.5 rounded-xl border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                activeFleetId === f.id
+                  ? 'bg-cyan-400/20 text-cyan-200 border-cyan-400/50 shadow-[0_0_12px_rgba(76,215,246,0.3)] font-semibold'
+                  : 'bg-white/[0.02] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: f.color }} />
+              <span>{f.codename}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/[0.08] text-slate-300">
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Real-time sync notification bar */}
       <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-400/20 flex items-center justify-between gap-3 text-xs font-mono text-slate-300">
         <div className="flex items-center gap-2">
@@ -203,6 +243,18 @@ export const TasksTab: React.FC = () => {
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
                       <span className="text-[11px]">#{task.hash}</span>
+                      {(() => {
+                        const taskFleet = fleets.find(f => f.id === (task.fleetId || 'fleet-alpha-core'));
+                        return (
+                          <span 
+                            className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.08] flex items-center gap-1"
+                            title={`Fleet: ${taskFleet?.name || 'Cluster'}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: taskFleet?.color || '#4cd7f6' }} />
+                            <span className="truncate max-w-[85px]">{taskFleet?.codename || 'FLEET-ALPHA'}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                       task.priorityLevel === 'P1'
@@ -319,6 +371,18 @@ export const TasksTab: React.FC = () => {
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
                       <span className="text-[11px]">#{task.hash}</span>
+                      {(() => {
+                        const taskFleet = fleets.find(f => f.id === (task.fleetId || 'fleet-alpha-core'));
+                        return (
+                          <span 
+                            className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.08] flex items-center gap-1"
+                            title={`Fleet: ${taskFleet?.name || 'Cluster'}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: taskFleet?.color || '#4cd7f6' }} />
+                            <span className="truncate max-w-[85px]">{taskFleet?.codename || 'FLEET-ALPHA'}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                       task.priorityLevel === 'P1'
@@ -447,6 +511,18 @@ export const TasksTab: React.FC = () => {
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
                       <span className="text-[11px]">#{task.hash}</span>
+                      {(() => {
+                        const taskFleet = fleets.find(f => f.id === (task.fleetId || 'fleet-alpha-core'));
+                        return (
+                          <span 
+                            className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.08] flex items-center gap-1"
+                            title={`Fleet: ${taskFleet?.name || 'Cluster'}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: taskFleet?.color || '#4cd7f6' }} />
+                            <span className="truncate max-w-[85px]">{taskFleet?.codename || 'FLEET-ALPHA'}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400 border border-emerald-400/25">
                       COMPLETED

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ModelOption } from '../types';
 import { INITIAL_CHAT_MESSAGES, AVAILABLE_MODELS } from '../data/mockData';
+import { useCluster } from '../context/ClusterContext';
+import { WebRtcModal } from './WebRtcModal';
 import { 
   Send, 
   Paperclip, 
@@ -26,10 +28,12 @@ import {
   Terminal,
   Cpu,
   Maximize2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Video
 } from 'lucide-react';
 
 export const ChatTab: React.FC = () => {
+  const { agents, activeFleet } = useCluster();
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
   const [inputText, setInputText] = useState('');
   const [activeModel, setActiveModel] = useState(AVAILABLE_MODELS[0].id);
@@ -44,6 +48,9 @@ export const ChatTab: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [isHalted, setIsHalted] = useState(false);
+  const [isWebRtcOpen, setIsWebRtcOpen] = useState(false);
+
+  const currentAgent = agents.find(a => a.id === activeThread) || agents[0];
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -386,6 +393,17 @@ export const ChatTab: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Start WebRTC Video Call */}
+            <button
+              onClick={() => setIsWebRtcOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(76,215,246,0.35)] hover:scale-105 active:scale-95"
+              title="Start WebRTC Real-Time Video & Audio Comms"
+              type="button"
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>WebRTC Call</span>
+            </button>
 
             {/* Clear Context Button */}
             <button
@@ -816,6 +834,16 @@ export const ChatTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* WebRTC Real-Time Video Call Modal */}
+      <WebRtcModal
+        isOpen={isWebRtcOpen}
+        onClose={() => setIsWebRtcOpen(false)}
+        agentName={currentAgent?.name || 'Hermes Prime'}
+        agentCodename={currentAgent?.codename || 'Orchestrator-01'}
+        agentPhoto={currentAgent?.avatarPhoto}
+        fleetName={activeFleet?.name || 'Alpha Core Fleet'}
+      />
     </div>
   );
 };

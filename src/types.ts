@@ -32,6 +32,19 @@ export interface ModelOption {
   tag: string;
 }
 
+export interface Fleet {
+  id: string;
+  name: string;
+  codename: string;
+  description: string;
+  purpose: 'Core Production' | 'Autonomous Dev & Code' | 'Research & Synthesis' | 'Security & Infrastructure' | 'Custom Swarm';
+  status: 'ACTIVE' | 'STANDBY' | 'DEGRADED';
+  nodeCluster: string;
+  vramAllocated: string;
+  defaultModelId: string;
+  color: string; // Hex or theme color for badge
+}
+
 export interface AgentMemoryItem {
   id: string;
   title: string;
@@ -48,9 +61,11 @@ export interface Agent {
   name: string;
   codename: string;
   role: string;
+  fleetId?: string;
   status: 'ONLINE' | 'BUSY' | 'MONITORING' | 'GUARD ACTIVE' | 'STANDBY';
   statusColor: 'tertiary' | 'primary' | 'secondary' | 'error' | 'warning';
   avatarIcon: string;
+  avatarPhoto?: string;
   description: string;
   activeModelId: string;
   latencyLabel: string;
@@ -89,6 +104,7 @@ export interface TaskItem {
   id: string;
   hash: string;
   title: string;
+  fleetId?: string;
   column: 'todo' | 'inprogress' | 'done';
   priority: 'P1 · CRITICAL' | 'P2 · ELEVATED' | 'P3 · NORMAL';
   priorityLevel: 'P1' | 'P2' | 'P3';
@@ -154,3 +170,55 @@ export interface ArtifactItem {
   fidelityStat?: string;
   rawContent?: string;
 }
+
+export interface UserProfile {
+  callsign: string;
+  name: string;
+  role: string;
+  authLevel: string;
+  photoUrl: string;
+  bio?: string;
+  email?: string;
+}
+
+export type PetSpecies = 'falcon' | 'cat' | 'wyrm' | 'drone' | 'k9';
+export type PetMood = 'happy' | 'alert' | 'curious' | 'sleeping' | 'hacking';
+
+export interface PetConfig {
+  enabled: boolean;
+  species: PetSpecies;
+  name: string;
+  mood: PetMood;
+  accessory: 'none' | 'visor' | 'halo' | 'jetpack' | 'crown' | 'headphones';
+  auraColor: string;
+  chimesEnabled: boolean;
+  position: 'docked-right' | 'docked-left' | 'floating';
+  happiness: number;
+  hunger: number;
+  lastInteraction: string;
+}
+
+export interface CustomPlugin {
+  id: string;
+  name: string;
+  description: string;
+  category: 'visual' | 'audio' | 'telemetry' | 'utility';
+  enabled: boolean;
+  version: string;
+  author: string;
+  icon: string;
+  configurable?: boolean;
+  settings?: Record<string, any>;
+}
+
+export interface CustomThemeConfig {
+  accentColor: string;
+  secondaryColor: string;
+  bgColor: string;
+  cardColor: string;
+  borderColor: string;
+  glowIntensity: 'none' | 'subtle' | 'high' | 'overclocked';
+  glassmorphism: boolean;
+  fontScaling: 'compact' | 'standard' | 'spacious';
+}
+

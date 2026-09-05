@@ -1,23 +1,45 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Agent, TaskItem, ActivityEvent, AgentMemoryItem, ModelOption } from '../types';
-import { INITIAL_AGENTS, INITIAL_TASKS, INITIAL_ACTIVITY_EVENTS, AVAILABLE_MODELS } from '../data/mockData';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { Agent, TaskItem, ActivityEvent, AgentMemoryItem, ModelOption, Fleet, UserProfile } from '../types';
+import { INITIAL_AGENTS, INITIAL_TASKS, INITIAL_ACTIVITY_EVENTS, AVAILABLE_MODELS, INITIAL_FLEETS } from '../data/mockData';
+
+export const DEFAULT_OPERATOR_PROFILE: UserProfile = {
+  callsign: 'OP-7740',
+  name: 'Basem Alsaeed',
+  role: 'Master Cluster Architect',
+  authLevel: 'LEVEL-4 AUTH',
+  photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+  bio: 'Primary Overseer directing multi-fleet autonomous agent orchestration, VRAM allocation, and neural comms.',
+  email: 'basemAlsaeed@gmail.com'
+};
 
 interface ClusterContextType {
   tasks: TaskItem[];
   agents: Agent[];
   events: ActivityEvent[];
+  fleets: Fleet[];
+  activeFleetId: string;
+  activeFleet: Fleet | null;
+  activeAgents: Agent[];
+  activeTasks: TaskItem[];
+  operatorProfile: UserProfile;
   toast: string | null;
+  setActiveFleetId: (fleetId: string) => void;
+  createFleet: (newFleet: Fleet) => void;
   moveTask: (taskId: string, targetColumn: 'todo' | 'inprogress' | 'done') => void;
   createTask: (newTask: TaskItem) => void;
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>;
   setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
   setEvents: React.Dispatch<React.SetStateAction<ActivityEvent[]>>;
+  setFleets: React.Dispatch<React.SetStateAction<Fleet[]>>;
   updateAgentSoul: (agentId: string, newSoul: string) => void;
   updateAgentMemories: (agentId: string, memories: AgentMemoryItem[]) => void;
   changeAgentModel: (agentId: string, newModelId: string) => void;
   autoBalanceFleet: () => void;
   killAgentTask: (agentId: string) => void;
   deployAgent: (newAgent: Agent) => void;
+  reassignAgentFleet: (agentId: string, newFleetId: string) => void;
+  updateAgentPhoto: (agentId: string, photoUrl: string) => void;
+  updateOperatorProfile: (updates: Partial<UserProfile>) => void;
   addActivityEvent: (event: Omit<ActivityEvent, 'id' | 'timestamp'>) => void;
   showToast: (msg: string) => void;
 }
@@ -26,13 +48,76 @@ const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
 
 const TASKS_STORAGE_KEY = 'hermes_tasks_state_v1';
 const AGENTS_STORAGE_KEY = 'hermes_agents_state_v1';
+const FLEETS_STORAGE_KEY = 'hermes_fleets_state_v1';
+const ACTIVE_FLEET_KEY = 'hermes_active_fleet_id';
 
 export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Initialize fleets
+  const [fleets, setFleets] = useState<Fleet[]>(() => {
+    try {
+      const saved = localStorage.getItem(FLEETS_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to load fleets from localStorage', e);
+    }
+    return INITIAL_FLEETS;
+  });
+
+  // Initialize active fleet id
+  const [activeFleetId, setActiveFleetIdState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(ACTIVE_FLEET_KEY);
+      if (saved) return saved;
+    } catch (e) {
+      console.error('Failed to load activeFleetId', e);
+    }
+    return 'fleet-alpha-core';
+  });
+
+  const setActiveFleetId = (id: string) => {
+    setActiveFleetIdState(id);
+    try {
+      localStorage.setItem(ACTIVE_FLEET_KEY, id);
+    } catch (e) {
+      console.error('Failed to save activeFleetId', e);
+    }
+    const targetFleet = fleets.find(f => f.id === id);
+    if (targetFleet) {
+      showToast(`Switched active fleet context to [${targetFleet.codename}]`);
+    } else if (id === 'all') {
+      showToast(`Switched to Federated View (All Host Fleets)`);
+    }
+  };
+
+  // Sync fleets
+  useEffect(() => {
+    try {
+      localStorage.setItem(FLEETS_STORAGE_KEY, JSON.stringify(fleets));
+    } catch (e) {
+      console.error('Failed to persist fleets', e);
+    }
+  }, [fleets]);
+
+  // Helper to resolve fleetId for legacy stored agents
+  const resolveLegacyAgentFleet = (agent: Agent): string => {
+    if (agent.fleetId) return agent.fleetId;
+    if (agent.id.includes('synth') || agent.id.includes('coder') || agent.id.includes('vanguard')) return 'fleet-dev-synth';
+    if (agent.id.includes('oracle') || agent.id.includes('research') || agent.id.includes('citation')) return 'fleet-deep-oracle';
+    if (agent.id.includes('security') || agent.id.includes('guard') || agent.id.includes('sentinel')) return 'fleet-sec-sentinel';
+    return 'fleet-alpha-core';
+  };
+
   // Initialize tasks from localStorage or mockData
   const [tasks, setTasks] = useState<TaskItem[]>(() => {
     try {
       const saved = localStorage.getItem(TASKS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: TaskItem[] = JSON.parse(saved);
+        return parsed.map(t => ({
+          ...t,
+          fleetId: t.fleetId || (t.assignedAgent.toLowerCase().includes('dev') ? 'fleet-dev-synth' : 'fleet-alpha-core')
+        }));
+      }
     } catch (e) {
       console.error('Failed to load tasks from localStorage', e);
     }
@@ -43,7 +128,25 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [agents, setAgents] = useState<Agent[]>(() => {
     try {
       const saved = localStorage.getItem(AGENTS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: Agent[] = JSON.parse(saved);
+        // Ensure every agent has fleetId and new default agents exist if missing
+        const existingIds = new Set(parsed.map(a => a.id));
+        const updated: Agent[] = parsed.map(a => {
+          const initMatch = INITIAL_AGENTS.find(i => i.id === a.id);
+          return {
+            ...a,
+            fleetId: resolveLegacyAgentFleet(a),
+            avatarPhoto: a.avatarPhoto || initMatch?.avatarPhoto
+          };
+        });
+        INITIAL_AGENTS.forEach(initAgent => {
+          if (!existingIds.has(initAgent.id)) {
+            updated.push(initAgent);
+          }
+        });
+        return updated;
+      }
     } catch (e) {
       console.error('Failed to load agents from localStorage', e);
     }
@@ -70,6 +173,35 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.error('Failed to persist agents', e);
     }
   }, [agents]);
+
+  const activeFleet = useMemo(() => {
+    return fleets.find(f => f.id === activeFleetId) || null;
+  }, [fleets, activeFleetId]);
+
+  // Filtered agents for active fleet
+  const activeAgents = useMemo(() => {
+    if (activeFleetId === 'all') return agents;
+    return agents.filter(a => (a.fleetId || 'fleet-alpha-core') === activeFleetId);
+  }, [agents, activeFleetId]);
+
+  // Filtered tasks for active fleet
+  const activeTasks = useMemo(() => {
+    if (activeFleetId === 'all') return tasks;
+    return tasks.filter(t => (t.fleetId || 'fleet-alpha-core') === activeFleetId);
+  }, [tasks, activeFleetId]);
+
+  const createFleet = (newFleet: Fleet) => {
+    setFleets(prev => [...prev, newFleet]);
+    setActiveFleetId(newFleet.id);
+    showToast(`Created & booted fleet [${newFleet.codename}] on host cluster.`);
+    addActivityEvent({
+      agent: 'Hermes Orchestrator',
+      category: 'GATEWAY',
+      text: `Host server partitioned new fleet: ${newFleet.name} [${newFleet.codename}]`,
+      status: 'PROVISIONED',
+      statusType: 'success'
+    });
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -272,6 +404,12 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     showToast(`Successfully deployed autonomous worker: ${newAgent.name}`);
   };
 
+  const reassignAgentFleet = (agentId: string, newFleetId: string) => {
+    setAgents(prev => prev.map(ag => ag.id === agentId ? { ...ag, fleetId: newFleetId } : ag));
+    const targetFleet = fleets.find(f => f.id === newFleetId);
+    showToast(`Reassigned agent to [${targetFleet?.codename || newFleetId}] partition`);
+  };
+
   const addActivityEvent = (event: Omit<ActivityEvent, 'id' | 'timestamp'>) => {
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
@@ -283,13 +421,50 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     setEvents(prev => [newEvent, ...prev]);
   };
 
+  const [operatorProfile, setOperatorProfile] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem('hermes_operator_profile_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to load operator profile', e);
+    }
+    return DEFAULT_OPERATOR_PROFILE;
+  });
+
+  const updateOperatorProfile = (updates: Partial<UserProfile>) => {
+    setOperatorProfile(prev => {
+      const updated = { ...prev, ...updates };
+      try {
+        localStorage.setItem('hermes_operator_profile_v1', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to persist operator profile', e);
+      }
+      return updated;
+    });
+    showToast('Operator profile updated successfully');
+  };
+
+  const updateAgentPhoto = (agentId: string, photoUrl: string) => {
+    setAgents(prev => prev.map(ag => ag.id === agentId ? { ...ag, avatarPhoto: photoUrl } : ag));
+    showToast('Updated agent portrait photo');
+  };
+
   return (
     <ClusterContext.Provider
       value={{
         tasks,
         agents,
         events,
+        fleets,
+        activeFleetId,
+        activeFleet,
+        activeAgents,
+        activeTasks,
+        operatorProfile,
         toast,
+        setActiveFleetId,
+        createFleet,
+        setFleets,
         moveTask,
         createTask,
         setTasks,
@@ -301,6 +476,9 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
         autoBalanceFleet,
         killAgentTask,
         deployAgent,
+        reassignAgentFleet,
+        updateAgentPhoto,
+        updateOperatorProfile,
         addActivityEvent,
         showToast
       }}

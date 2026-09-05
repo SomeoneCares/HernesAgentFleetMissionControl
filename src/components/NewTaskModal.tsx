@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TaskItem } from '../types';
-import { X, CheckSquare, AlertCircle } from 'lucide-react';
+import { useCluster } from '../context/ClusterContext';
+import { X, CheckSquare, AlertCircle, Layers } from 'lucide-react';
 
 interface NewTaskModalProps {
   isOpen: boolean;
@@ -9,7 +10,11 @@ interface NewTaskModalProps {
 }
 
 export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onCreate }) => {
+  const { fleets, activeFleetId, agents } = useCluster();
   const [title, setTitle] = useState('');
+  const [selectedFleetId, setSelectedFleetId] = useState(
+    activeFleetId === 'all' ? (fleets[0]?.id || 'fleet-alpha-core') : activeFleetId
+  );
   const [priority, setPriority] = useState<'P1 · CRITICAL' | 'P2 · ELEVATED' | 'P3 · NORMAL'>('P2 · ELEVATED');
   const [assignedAgent, setAssignedAgent] = useState('CodeSynthesizer');
   const [tags, setTags] = useState('#INFRA, #HERMES');
@@ -27,13 +32,14 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onC
 
     let agentTag: 'Dev' | 'Orchestrator' | 'Scout' | 'OpsSentry' | 'Security' = 'Dev';
     if (assignedAgent.includes('Orchestrator') || assignedAgent.includes('Prime')) agentTag = 'Orchestrator';
-    else if (assignedAgent.includes('Research') || assignedAgent.includes('Oracle')) agentTag = 'Scout';
+    else if (assignedAgent.includes('Research') || assignedAgent.includes('Oracle') || assignedAgent.includes('Citation')) agentTag = 'Scout';
     else if (assignedAgent.includes('Ops')) agentTag = 'OpsSentry';
-    else if (assignedAgent.includes('Security')) agentTag = 'Security';
+    else if (assignedAgent.includes('Security') || assignedAgent.includes('Guard')) agentTag = 'Security';
 
     const newTask: TaskItem = {
       id: `task-${Date.now()}`,
       hash: hashHex,
+      fleetId: selectedFleetId,
       title: title.trim(),
       column: 'todo',
       priority,
@@ -75,6 +81,23 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onC
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1.5 uppercase font-medium">
+              Target Fleet Partition *
+            </label>
+            <select
+              value={selectedFleetId}
+              onChange={(e) => setSelectedFleetId(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#141b2b] border border-cyan-400/30 text-cyan-300 font-semibold focus:border-cyan-400 focus:outline-none text-xs cursor-pointer"
+            >
+              {fleets.map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.codename})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-[11px] text-slate-400 mb-1.5 uppercase font-medium">Mission Objective / Task Title</label>
             <input

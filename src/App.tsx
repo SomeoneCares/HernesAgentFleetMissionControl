@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { TabType } from './types';
 import { ThemeProvider } from './context/ThemeContext';
 import { ClusterProvider, useCluster } from './context/ClusterContext';
+import { PetProvider } from './context/PetContext';
+import { PluginsProvider } from './context/PluginsContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { OverviewTab } from './components/OverviewTab';
@@ -17,6 +19,10 @@ import { ContentLibraryTab } from './components/ContentLibraryTab';
 import { CliModal } from './components/CliModal';
 import { SkinSelectorModal } from './components/SkinSelectorModal';
 import { SelfHostModal } from './components/SelfHostModal';
+import { CyberPet } from './components/CyberPet';
+import { CyberPetModal } from './components/CyberPetModal';
+import { PluginsModal } from './components/PluginsModal';
+import { OperatorProfileModal } from './components/OperatorProfileModal';
 import { Zap, CheckCircle2 } from 'lucide-react';
 
 function AppContent() {
@@ -24,6 +30,10 @@ function AppContent() {
   const [isCliOpen, setIsCliOpen] = useState<boolean>(false);
   const [isSkinsOpen, setIsSkinsOpen] = useState<boolean>(false);
   const [isSelfHostOpen, setIsSelfHostOpen] = useState<boolean>(false);
+  const [isPetModalOpen, setIsPetModalOpen] = useState<boolean>(false);
+  const [isPluginsModalOpen, setIsPluginsModalOpen] = useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  
   const { toast } = useCluster();
 
   return (
@@ -33,13 +43,16 @@ function AppContent() {
       <div className="fixed -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
       <div className="fixed top-1/2 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
 
-      {/* Top Fixed Header */}
+      {/* Top Fixed Header with Comms & Tools */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenCli={() => setIsCliOpen(true)}
         onOpenSkins={() => setIsSkinsOpen(true)}
         onOpenSelfHost={() => setIsSelfHostOpen(true)}
+        onOpenPet={() => setIsPetModalOpen(true)}
+        onOpenPlugins={() => setIsPluginsModalOpen(true)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -51,6 +64,9 @@ function AppContent() {
         {activeTab === 'library' && <ContentLibraryTab />}
       </main>
 
+      {/* Interactive Cyber Pet Companion (Docked HUD) */}
+      <CyberPet onOpenConfig={() => setIsPetModalOpen(true)} />
+
       {/* Aerospace Footer */}
       <Footer />
 
@@ -60,7 +76,7 @@ function AppContent() {
         onClose={() => setIsCliOpen(false)}
       />
 
-      {/* Visual Skin Switcher Modal */}
+      {/* Visual Skin & Theme Designer Modal */}
       <SkinSelectorModal
         isOpen={isSkinsOpen}
         onClose={() => setIsSkinsOpen(false)}
@@ -70,6 +86,24 @@ function AppContent() {
       <SelfHostModal
         isOpen={isSelfHostOpen}
         onClose={() => setIsSelfHostOpen(false)}
+      />
+
+      {/* Cyber Pet Companion Config Modal */}
+      <CyberPetModal
+        isOpen={isPetModalOpen}
+        onClose={() => setIsPetModalOpen(false)}
+      />
+
+      {/* Custom UI Plugins & CSS Injection Modal */}
+      <PluginsModal
+        isOpen={isPluginsModalOpen}
+        onClose={() => setIsPluginsModalOpen(false)}
+      />
+
+      {/* Operator Profile & Avatar Photo Modal */}
+      <OperatorProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
 
       {/* Global Task/Pipeline Action Toast */}
@@ -91,9 +125,13 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <ClusterProvider>
-        <AppContent />
-      </ClusterProvider>
+      <PluginsProvider>
+        <PetProvider>
+          <ClusterProvider>
+            <AppContent />
+          </ClusterProvider>
+        </PetProvider>
+      </PluginsProvider>
     </ThemeProvider>
   );
 }

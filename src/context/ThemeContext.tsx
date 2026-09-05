@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { SkinTheme, SkinOption } from '../types';
+import { SkinTheme, SkinOption, CustomThemeConfig } from '../types';
 
 export const AVAILABLE_SKINS: SkinOption[] = [
   {
@@ -76,11 +76,29 @@ export const AVAILABLE_SKINS: SkinOption[] = [
   }
 ];
 
+export const DEFAULT_CUSTOM_THEME: CustomThemeConfig = {
+  accentColor: '#4cd7f6',
+  secondaryColor: '#a855f7',
+  bgColor: '#07090e',
+  cardColor: '#101622',
+  borderColor: 'rgba(76, 215, 246, 0.3)',
+  glowIntensity: 'high',
+  glassmorphism: true,
+  fontScaling: 'standard'
+};
+
+const CUSTOM_THEME_STORAGE_KEY = 'hermes_custom_theme_config_v1';
+
 interface ThemeContextType {
   activeSkin: SkinTheme;
   setActiveSkin: (skin: SkinTheme) => void;
   currentSkinMeta: SkinOption;
   availableSkins: SkinOption[];
+  customTheme: CustomThemeConfig;
+  updateCustomTheme: (updates: Partial<CustomThemeConfig>) => void;
+  resetCustomTheme: () => void;
+  isCustomThemeActive: boolean;
+  setIsCustomThemeActive: (active: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -94,28 +112,111 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return 'hermes-cyber';
   });
 
+  const [isCustomThemeActive, setIsCustomThemeActiveState] = useState<boolean>(() => {
+    return localStorage.getItem('hermes_custom_theme_active') === 'true';
+  });
+
+  const [customTheme, setCustomThemeState] = useState<CustomThemeConfig>(() => {
+    try {
+      const saved = localStorage.getItem(CUSTOM_THEME_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to load custom theme', e);
+    }
+    return DEFAULT_CUSTOM_THEME;
+  });
+
   const setActiveSkin = (skin: SkinTheme) => {
     setActiveSkinState(skin);
+    setIsCustomThemeActiveState(false);
     localStorage.setItem('hermes_active_skin', skin);
+    localStorage.setItem('hermes_custom_theme_active', 'false');
   };
 
+  const setIsCustomThemeActive = (active: boolean) => {
+    setIsCustomThemeActiveState(active);
+    localStorage.setItem('hermes_custom_theme_active', active ? 'true' : 'false');
+  };
+
+  const updateCustomTheme = (updates: Partial<CustomThemeConfig>) => {
+    setCustomThemeState(prev => {
+      const updated = { ...prev, ...updates };
+      localStorage.setItem(CUSTOM_THEME_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    setIsCustomThemeActive(true);
+  };
+
+  const resetCustomTheme = () => {
+    setCustomThemeState(DEFAULT_CUSTOM_THEME);
+    localStorage.setItem(CUSTOM_THEME_STORAGE_KEY, JSON.stringify(DEFAULT_CUSTOM_THEME));
+  };
+
+  // Sync CSS variables & theme classes to root
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', activeSkin);
-    
-    if (activeSkin === 'alpine-daylight') {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    } else {
+
+    if (isCustomThemeActive) {
+      root.setAttribute('data-theme', 'custom');
+      root.style.setProperty('--color-theme-accent', customTheme.accentColor);
+      root.style.setProperty('--color-theme-secondary', customTheme.secondaryColor);
+      root.style.setProperty('--color-theme-bg', customTheme.bgColor);
+      root.style.setProperty('--color-theme-card', customTheme.cardColor);
+      root.style.setProperty('--color-theme-border', customTheme.borderColor);
+
+      // Glow Intensity
+      if (customTheme.glowIntensity === 'none') {
+        root.style.setProperty('--glow-blur', '0px');
+        root.style.setProperty('--glow-opacity', '0');
+      } else if (customTheme.glowIntensity === 'subtle') {
+        root.style.setProperty('--glow-blur', '10px');
+        root.style.setProperty('--glow-opacity', '0.15');
+      } else if (customTheme.glowIntensity === 'high') {
+        root.style.setProperty('--glow-blur', '22px');
+        root.style.setProperty('--glow-opacity', '0.35');
+      } else {
+        // overclocked
+        root.style.setProperty('--glow-blur', '38px');
+        root.style.setProperty('--glow-opacity', '0.6');
+      }
+
       root.classList.add('dark');
       root.classList.remove('light');
+    } else {
+      root.setAttribute('data-theme', activeSkin);
+      const current = AVAILABLE_SKINS.find(s => s.id === activeSkin) || AVAILABLE_SKINS[0];
+      root.style.setProperty('--color-theme-accent', current.accentColor);
+      root.style.setProperty('--color-theme-secondary', current.secondaryColor);
+      root.style.setProperty('--color-theme-bg', current.bgColor);
+      root.style.setProperty('--color-theme-card', current.cardColor);
+      root.style.setProperty('--color-theme-border', current.borderColor);
+
+      if (activeSkin === 'alpine-daylight') {
+        root.classList.remove('dark');
+        root.classList.add('light');
+      } else {
+        root.classList.add('dark');
+        root.classList.remove('light');
+      }
     }
-  }, [activeSkin]);
+  }, [activeSkin, isCustomThemeActive, customTheme]);
 
   const currentSkinMeta = AVAILABLE_SKINS.find(s => s.id === activeSkin) || AVAILABLE_SKINS[0];
 
   return (
-    <ThemeContext.Provider value={{ activeSkin, setActiveSkin, currentSkinMeta, availableSkins: AVAILABLE_SKINS }}>
+    <ThemeContext.Provider 
+      value={{ 
+        activeSkin, 
+        setActiveSkin, 
+        currentSkinMeta, 
+        availableSkins: AVAILABLE_SKINS,
+        customTheme,
+        updateCustomTheme,
+        resetCustomTheme,
+        isCustomThemeActive,
+        setIsCustomThemeActive
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

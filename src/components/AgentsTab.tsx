@@ -6,6 +6,8 @@ import { DeployAgentModal } from './DeployAgentModal';
 import { AgentDetailModal } from './AgentDetailModal';
 import { AgentSoulModal } from './AgentSoulModal';
 import { AgentMemoryModal } from './AgentMemoryModal';
+import { CreateFleetModal } from './CreateFleetModal';
+import { AgentPhotoModal } from './AgentPhotoModal';
 import { 
   Bot, 
   Layers, 
@@ -24,12 +26,19 @@ import {
   ExternalLink,
   ChevronDown,
   FileCode,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react';
 
 export const AgentsTab: React.FC = () => {
   const { 
     agents, 
+    fleets,
+    activeFleetId,
+    setActiveFleetId,
+    activeFleet,
+    reassignAgentFleet,
+    createFleet,
     setAgents, 
     updateAgentSoul, 
     updateAgentMemories, 
@@ -41,13 +50,20 @@ export const AgentsTab: React.FC = () => {
   } = useCluster();
 
   const [isDeployOpen, setIsDeployOpen] = useState(false);
+  const [isCreateFleetOpen, setIsCreateFleetOpen] = useState(false);
   const [fleetsPaused, setFleetsPaused] = useState(false);
   const [activeModalAgent, setActiveModalAgent] = useState<Agent | null>(null);
   const [modalMode, setModalMode] = useState<'logs' | 'memory' | 'sandbox' | 'terminal' | null>(null);
   const [soulModalAgent, setSoulModalAgent] = useState<Agent | null>(null);
   const [memoryModalAgent, setMemoryModalAgent] = useState<Agent | null>(null);
+  const [photoModalAgent, setPhotoModalAgent] = useState<Agent | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [isAutoBalancing, setIsAutoBalancing] = useState(false);
+
+  // Filter agents by active fleet
+  const displayAgents = activeFleetId === 'all' 
+    ? agents 
+    : agents.filter(a => (a.fleetId || 'fleet-alpha-core') === activeFleetId);
 
   // Change model for an agent
   const handleModelChange = (agentId: string, newModelId: string) => {
@@ -238,44 +254,184 @@ export const AgentsTab: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. AGENT CARDS GRID */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {agents.map((agent) => {
-          const currentModel = AVAILABLE_MODELS.find(m => m.id === agent.activeModelId) || AVAILABLE_MODELS[0];
-          const contextPercent = Math.round((agent.contextUsed / agent.contextTotal) * 100);
+      {/* FLEET SELECTION & HOST PARTITION CONTROL BAR */}
+      <div className="rounded-2xl bg-[#101622]/65 backdrop-blur-2xl border border-white/[0.08] p-6 shadow-xl flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-cyan-400" />
+            <span className="font-mono text-xs uppercase tracking-wider text-slate-300 font-semibold">
+              Host Server Fleet Partitions
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 text-cyan-300 border border-cyan-400/30">
+              Multi-Fleet Host
+            </span>
+          </div>
 
-          return (
-            <div
-              key={agent.id}
-              className="flex flex-col justify-between rounded-2xl bg-[#101622]/65 backdrop-blur-2xl border border-white/[0.08] p-7 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] hover:border-white/[0.18] transition-all duration-300 group"
-            >
-              <div>
-                {/* Top Row: Name, Codename, Status Badge */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-cyan-400/10 border border-cyan-400/25 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400/50 transition-colors">
-                      <span className="material-symbols-outlined text-2xl">{agent.avatarIcon}</span>
+          <button
+            onClick={() => setIsCreateFleetOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 text-xs font-mono font-medium flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+            type="button"
+          >
+            <PlusCircle className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Partition New Fleet</span>
+          </button>
+        </div>
+
+        {/* Fleet Tabs Strip */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 font-mono text-xs">
+          <button
+            onClick={() => setActiveFleetId('all')}
+            className={`px-3.5 py-2 rounded-xl border transition-all shrink-0 cursor-pointer ${
+              activeFleetId === 'all'
+                ? 'bg-cyan-400/20 text-cyan-200 border-cyan-400/50 shadow-[0_0_15px_rgba(76,215,246,0.3)] font-bold'
+                : 'bg-white/[0.02] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white'
+            }`}
+          >
+            Federated View (All {agents.length} Agents)
+          </button>
+          {fleets.map(fleet => {
+            const fleetAgentCount = agents.filter(a => (a.fleetId || 'fleet-alpha-core') === fleet.id).length;
+            const isSelected = activeFleetId === fleet.id;
+            return (
+              <button
+                key={fleet.id}
+                onClick={() => setActiveFleetId(fleet.id)}
+                className={`px-3.5 py-2 rounded-xl border transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
+                  isSelected
+                    ? 'bg-cyan-400/20 text-cyan-200 border-cyan-400/50 shadow-[0_0_15px_rgba(76,215,246,0.3)] font-bold'
+                    : 'bg-white/[0.02] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: fleet.color }} />
+                <span>{fleet.name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
+                  {fleetAgentCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Fleet Details Spec Pill (if single fleet selected) */}
+        {activeFleet && activeFleetId !== 'all' && (
+          <div className="pt-3 border-t border-white/[0.05] grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs font-mono text-slate-400">
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">Codename / Purpose</span>
+              <span className="text-white font-medium truncate block">{activeFleet.codename}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">Host Cluster Node</span>
+              <span className="text-cyan-300 font-medium truncate block">{activeFleet.nodeCluster}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">VRAM Headroom</span>
+              <span className="text-purple-300 font-medium truncate block">{activeFleet.vramAllocated}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">Default Engine</span>
+              <span className="text-emerald-300 font-medium truncate block">{activeFleet.defaultModelId}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. AGENT CARDS GRID */}
+      {displayAgents.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl bg-[#101622]/65 border border-white/[0.08] flex flex-col items-center justify-center gap-3 font-mono text-xs text-slate-400">
+          <Bot className="w-8 h-8 text-slate-600 mb-1" />
+          <p className="text-slate-300 font-bold text-sm">No autonomous agents currently assigned to this fleet partition.</p>
+          <p className="text-slate-500 max-w-md">You can deploy a new agent directly into this partition or switch to Federated View to relocate existing workers.</p>
+          <button
+            onClick={() => setIsDeployOpen(true)}
+            className="mt-2 px-4 py-2 rounded-xl bg-cyan-400/15 hover:bg-cyan-400/25 text-cyan-300 border border-cyan-400/30 transition-all font-bold cursor-pointer"
+          >
+            Deploy Agent to this Fleet
+          </button>
+        </div>
+      ) : (
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {displayAgents.map((agent) => {
+            const currentModel = AVAILABLE_MODELS.find(m => m.id === agent.activeModelId) || AVAILABLE_MODELS[0];
+            const contextPercent = Math.round((agent.contextUsed / agent.contextTotal) * 100);
+            const agentFleet = fleets.find(f => f.id === (agent.fleetId || 'fleet-alpha-core'));
+
+            return (
+              <div
+                key={agent.id}
+                className="flex flex-col justify-between rounded-2xl bg-[#101622]/65 backdrop-blur-2xl border border-white/[0.08] p-7 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] hover:border-white/[0.18] transition-all duration-300 group"
+              >
+                <div>
+                  {/* Top Row: Name, Codename, Status Badge */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPhotoModalAgent(agent)}
+                        className="relative w-12 h-12 rounded-xl overflow-hidden border border-cyan-400/30 group-hover:border-cyan-400/70 bg-slate-900 shrink-0 transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95 group/photo"
+                        title="Click to change profile portrait photo"
+                      >
+                        {agent.avatarPhoto ? (
+                          <img
+                            src={agent.avatarPhoto}
+                            alt={agent.name}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-cyan-400/10 flex items-center justify-center text-cyan-400">
+                            <span className="material-symbols-outlined text-2xl">{agent.avatarIcon}</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center text-cyan-300">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                      </button>
+                      <div>
+                        <h3 className="text-base font-bold text-white tracking-tight leading-snug flex items-center gap-1.5">
+                          {agent.name}
+                        </h3>
+                        <span className="text-xs font-mono text-slate-400">{agent.codename}</span>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white tracking-tight leading-snug">{agent.name}</h3>
-                      <span className="text-xs font-mono text-slate-400">{agent.codename}</span>
-                    </div>
+
+                    <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+                      agent.status === 'ONLINE'
+                        ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/25'
+                        : agent.status === 'BUSY'
+                        ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25'
+                        : agent.status === 'MONITORING'
+                        ? 'bg-purple-400/10 text-purple-300 border-purple-400/25'
+                        : agent.status === 'GUARD ACTIVE'
+                        ? 'bg-rose-400/10 text-rose-400 border-rose-400/25'
+                        : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
+                    }`}>
+                      {agent.status}
+                    </span>
                   </div>
 
-                  <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${
-                    agent.status === 'ONLINE'
-                      ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/25'
-                      : agent.status === 'BUSY'
-                      ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25'
-                      : agent.status === 'MONITORING'
-                      ? 'bg-purple-400/10 text-purple-300 border-purple-400/25'
-                      : agent.status === 'GUARD ACTIVE'
-                      ? 'bg-rose-400/10 text-rose-400 border-rose-400/25'
-                      : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
-                  }`}>
-                    {agent.status}
-                  </span>
-                </div>
+                  {/* Fleet Partition Tag & Fast Relocation Selector */}
+                  <div className="flex items-center justify-between gap-2 mb-4 px-2.5 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[11px] font-mono">
+                    <div className="flex items-center gap-1.5">
+                      <Layers className="w-3 h-3 text-cyan-400 shrink-0" />
+                      <span className="text-slate-400">Fleet:</span>
+                      <span className="flex items-center gap-1 font-semibold text-white">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: agentFleet?.color || '#4cd7f6' }} />
+                        <span className="truncate max-w-[110px]">{agentFleet?.name || 'Core Fleet'}</span>
+                      </span>
+                    </div>
+                    <select
+                      value={agent.fleetId || 'fleet-alpha-core'}
+                      onChange={(e) => reassignAgentFleet(agent.id, e.target.value)}
+                      className="bg-[#141c2c] border border-white/[0.1] text-slate-300 text-[10px] px-2 py-0.5 rounded cursor-pointer hover:border-cyan-400/40 focus:outline-none"
+                      title="Relocate agent to another fleet partition on this host"
+                    >
+                      {fleets.map(f => (
+                        <option key={f.id} value={f.id}>
+                          Move: {f.codename}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                 {/* Role Description */}
                 <p className="text-xs text-slate-300 leading-relaxed mb-5 min-h-[36px]">
@@ -446,6 +602,7 @@ export const AgentsTab: React.FC = () => {
           );
         })}
       </section>
+      )}
 
       {/* Deploy Agent Modal */}
       <DeployAgentModal
@@ -486,6 +643,23 @@ export const AgentsTab: React.FC = () => {
         isOpen={!!memoryModalAgent}
         onClose={() => setMemoryModalAgent(null)}
         onSaveMemories={handleSaveMemories}
+      />
+
+      {/* Dedicated Agent Photo Customizer Modal */}
+      <AgentPhotoModal
+        agent={photoModalAgent}
+        isOpen={!!photoModalAgent}
+        onClose={() => setPhotoModalAgent(null)}
+      />
+
+      {/* Provision New Fleet Modal */}
+      <CreateFleetModal
+        isOpen={isCreateFleetOpen}
+        onClose={() => setIsCreateFleetOpen(false)}
+        onCreateFleet={(newFleet) => {
+          createFleet(newFleet);
+          setIsCreateFleetOpen(false);
+        }}
       />
     </div>
   );

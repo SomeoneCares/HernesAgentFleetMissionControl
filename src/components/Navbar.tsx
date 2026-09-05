@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { TabType } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { useCluster } from '../context/ClusterContext';
+import { FleetSelectorDropdown } from './FleetSelectorDropdown';
 import { 
   Terminal, 
   Bell, 
@@ -11,7 +13,10 @@ import {
   Bot,
   Kanban,
   MessageSquare,
-  FolderGit2
+  FolderGit2,
+  Sparkles,
+  Puzzle,
+  User
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -20,6 +25,9 @@ interface NavbarProps {
   onOpenCli: () => void;
   onOpenSkins: () => void;
   onOpenSelfHost: () => void;
+  onOpenPet?: () => void;
+  onOpenPlugins?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -27,11 +35,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab, 
   onOpenCli,
   onOpenSkins,
-  onOpenSelfHost
+  onOpenSelfHost,
+  onOpenPet,
+  onOpenPlugins,
+  onOpenProfile
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [ping, setPing] = useState(14);
   const { currentSkinMeta } = useTheme();
+  const { activeAgents, activeTasks, operatorProfile } = useCluster();
 
   // Periodic subtle ping telemetry variation
   React.useEffect(() => {
@@ -43,8 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const tabs: { id: TabType; label: string; icon: React.FC<{ className?: string }>; badge?: string }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, badge: 'Live' },
-    { id: 'agents', label: 'Agents Fleet', icon: Bot, badge: '5 Agents' },
-    { id: 'tasks', label: 'Tasks', icon: Kanban, badge: '12 Kanban' },
+    { id: 'agents', label: 'Agents Fleet', icon: Bot, badge: `${activeAgents.length} Agents` },
+    { id: 'tasks', label: 'Tasks', icon: Kanban, badge: `${activeTasks.length} Kanban` },
     { id: 'chat', label: 'Comms & Chat', icon: MessageSquare, badge: 'Live' },
     { id: 'library', label: 'Content Library', icon: FolderGit2, badge: '18 Files' }
   ];
@@ -54,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Top Tier: Brand, Global Status, and Primary Utilities */}
       <div className="max-w-[1720px] mx-auto h-16 px-4 sm:px-8 flex items-center justify-between gap-4 border-b border-white/[0.05]">
         {/* Brand & Cluster Aura Indicator */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <button 
             onClick={() => setActiveTab('overview')}
             className="flex items-center gap-3 text-left group cursor-pointer focus:outline-none"
@@ -86,6 +98,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-mono text-[10px] font-medium tracking-wide text-slate-300">US-EAST-CORE-01</span>
             <span className="text-[9px] font-mono text-emerald-400 px-1 bg-emerald-400/10 rounded font-semibold">OPTIMAL</span>
           </div>
+
+          <div className="h-4 w-px bg-white/10 hidden sm:block" />
+
+          {/* Fleet Selector Dropdown */}
+          <FleetSelectorDropdown />
         </div>
 
         {/* Right Telemetry Status Pills & User Profile */}
@@ -138,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* 3. CLI Terminal Button */}
           <button
             onClick={onOpenCli}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer"
             type="button"
             title="Open Hermes CLI Terminal"
           >
@@ -146,11 +163,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden sm:inline">CLI</span>
           </button>
 
+          {/* 4. Cyber Pet Assistant Launcher */}
+          {onOpenPet && (
+            <button
+              onClick={onOpenPet}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all text-xs font-mono cursor-pointer group"
+              type="button"
+              title="Configure Cyber Pet Companion"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
+              <span className="hidden lg:inline font-medium">Pet</span>
+            </button>
+          )}
+
+          {/* 5. Custom Plugins Launcher */}
+          {onOpenPlugins && (
+            <button
+              onClick={onOpenPlugins}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all text-xs font-mono cursor-pointer group"
+              type="button"
+              title="Custom UI Plugins & CSS"
+            >
+              <Puzzle className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden lg:inline font-medium">Plugins</span>
+            </button>
+          )}
+
           {/* Notification Button */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] transition-all"
+              className="relative p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] transition-all cursor-pointer"
               type="button"
               title="System Alerts"
             >
@@ -187,25 +230,30 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="h-5 w-px bg-white/10 hidden sm:block" />
 
-          {/* User Profile */}
-          <div className="flex items-center gap-2.5 pl-1 group">
+          {/* User Profile (Clickable to edit operator profile & photo) */}
+          <button
+            onClick={onOpenProfile}
+            type="button"
+            className="flex items-center gap-2.5 pl-1 group text-left cursor-pointer focus:outline-none"
+            title="Edit Operator Profile & Photo"
+          >
             <div className="flex flex-col text-right hidden md:flex">
               <span className="text-xs font-semibold text-white tracking-tight leading-none group-hover:text-cyan-300 transition-colors">
-                OP-7740
+                {operatorProfile.callsign}
               </span>
               <span className="font-mono text-[9px] text-emerald-400 tracking-wider mt-0.5 font-medium">
-                LEVEL-4 AUTH
+                {operatorProfile.authLevel}
               </span>
             </div>
             <div className="relative">
               <img
-                alt="Profile"
-                className="w-8 h-8 rounded-xl object-cover ring-1 ring-white/20 group-hover:ring-cyan-400/50 transition-all shadow-md"
-                src="https://lh3.googleusercontent.com/aida/AEtjO1U7CFA2eq11fTUZeYlVg8sdGaBUpUo8R8YW_po-HQqzWCwMbLkG_D6hx_LTIujJ5yDww68Lgn9IEP3JFK2BV5eBb4omBVUV8e5LWXjgHg0gQ-ES6Q0x6lJUIYe4CWAKDVnLiyYhwmm3yXGZG25AEhd_0GoJ1y3I9VXu69rhGqMBlgx73t6-wcLE6nWoGcZSAtlp9ug-4DSdJj_lx709t9I7CpMVj7Ma0Z7FkINXNA9dfCdDDVeiOfzd_pxM"
+                alt={operatorProfile.name}
+                className="w-8 h-8 rounded-xl object-cover ring-1 ring-white/20 group-hover:ring-cyan-400/70 transition-all shadow-md"
+                src={operatorProfile.photoUrl || "https://lh3.googleusercontent.com/aida/AEtjO1U7CFA2eq11fTUZeYlVg8sdGaBUpUo8R8YW_po-HQqzWCwMbLkG_D6hx_LTIujJ5yDww68Lgn9IEP3JFK2BV5eBb4omBVUV8e5LWXjgHg0gQ-ES6Q0x6lJUIYe4CWAKDVnLiyYhwmm3yXGZG25AEhd_0GoJ1y3I9VXu69rhGqMBlgx73t6-wcLE6nWoGcZSAtlp9ug-4DSdJj_lx709t9I7CpMVj7Ma0Z7FkINXNA9dfCdDDVeiOfzd_pxM"}
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#07090e]"></span>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 

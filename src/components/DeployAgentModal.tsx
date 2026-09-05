@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Agent, ModelOption } from '../types';
 import { AVAILABLE_MODELS } from '../data/mockData';
-import { X, Sparkles, Cpu, Shield, PlusCircle } from 'lucide-react';
+import { useCluster } from '../context/ClusterContext';
+import { X, Sparkles, Cpu, Shield, PlusCircle, Layers } from 'lucide-react';
 
 interface DeployAgentModalProps {
   isOpen: boolean;
@@ -10,8 +11,12 @@ interface DeployAgentModalProps {
 }
 
 export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onClose, onDeploy }) => {
+  const { fleets, activeFleetId } = useCluster();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
+  const [selectedFleetId, setSelectedFleetId] = useState(
+    activeFleetId === 'all' ? (fleets[0]?.id || 'fleet-alpha-core') : activeFleetId
+  );
   const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
   const [contextSize, setContextSize] = useState('64k');
   const [memoryType, setMemoryType] = useState('Shared Vector RAG');
@@ -26,6 +31,7 @@ export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onCl
 
     const newAgent: Agent = {
       id: `agent-${Date.now()}`,
+      fleetId: selectedFleetId,
       name: name.trim(),
       codename: `Agent-${Math.floor(10 + Math.random() * 90)} // Custom Worker`,
       role: role.trim(),
@@ -76,6 +82,23 @@ export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onCl
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1.5 uppercase font-medium">
+              Assigned Host Fleet Partition *
+            </label>
+            <select
+              value={selectedFleetId}
+              onChange={(e) => setSelectedFleetId(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#141b2b] border border-cyan-400/30 text-cyan-300 font-semibold focus:border-cyan-400 focus:outline-none text-xs cursor-pointer"
+            >
+              {fleets.map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.codename})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-[11px] text-slate-400 mb-1.5 uppercase font-medium">Agent Designator / Name</label>
             <input
