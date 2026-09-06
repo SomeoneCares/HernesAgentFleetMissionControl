@@ -1,0 +1,262 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07090e" />
+      <stop offset="50%" stop-color="#0a0e17" />
+      <stop offset="100%" stop-color="#05070a" />
+    </linearGradient>
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4cd7f6" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#101524" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0a0e17" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="neonCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .neon-text { fill: #4cd7f6; font-weight: 700; }
+    .muted-text { fill: #64748b; }
+    .sub-text { fill: #94a3b8; }
+    .light-text { fill: #f8fafc; font-weight: 600; }
+  </style>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="675" fill="url(#bgGrad)" />
+
+  <!-- Ambient Light Orbs -->
+  <circle cx="150" cy="120" r="180" fill="#4cd7f6" opacity="0.07" />
+  <circle cx="1050" cy="500" r="220" fill="#8b5cf6" opacity="0.06" />
+
+  <!-- Browser Window Chrome -->
+  <rect x="20" y="20" width="1160" height="635" rx="14" fill="#0b0f19" stroke="#1e293b" stroke-width="1.5" filter="url(#shadow)" />
+  
+  <!-- Window Top Bar -->
+  <path d="M 20 34 Q 20 20 34 20 L 1166 20 Q 1180 20 1180 34 L 1180 62 L 20 62 Z" fill="#090d15" />
+  <line x1="20" y1="62" x2="1180" y2="62" stroke="#1e293b" stroke-width="1" />
+  
+  <!-- Window Controls -->
+  <circle cx="45" cy="41" r="5.5" fill="#ef4444" />
+  <circle cx="63" cy="41" r="5.5" fill="#f59e0b" />
+  <circle cx="81" cy="41" r="5.5" fill="#10b981" />
+
+  <!-- Browser URL Pill -->
+  <rect x="360" y="30" width="480" height="22" rx="6" fill="#141c2e" stroke="#334155" stroke-width="0.8" />
+  <text x="600" y="45" text-anchor="middle" class="mono" font-size="11" fill="#94a3b8">https://hermes.cluster.internal:3000/overview</text>
+
+  <!-- Top Application Navbar -->
+  <rect x="20" y="62" width="1160" height="52" fill="#07090e" opacity="0.95" />
+  <line x1="20" y1="114" x2="1180" y2="114" stroke="#1e293b" stroke-width="1" />
+
+  <!-- Hermes Brand -->
+  <rect x="40" y="73" width="30" height="30" rx="8" fill="#4cd7f6" fill-opacity="0.15" stroke="#4cd7f6" stroke-width="1" />
+  <path d="M 48 83 L 55 79 L 62 83 L 55 87 Z" fill="#4cd7f6" />
+  <path d="M 48 89 L 55 85 L 62 89 L 55 93 Z" fill="#4cd7f6" opacity="0.7" />
+  
+  <text x="80" y="87" class="sans light-text" font-size="14">HERMES</text>
+  <rect x="145" y="75" width="46" height="15" rx="3" fill="#4cd7f6" fill-opacity="0.12" stroke="#4cd7f6" stroke-width="0.8" />
+  <text x="168" y="86" text-anchor="middle" class="mono" font-size="9" fill="#4cd7f6" font-weight="700">OS 4.2</text>
+  <text x="80" y="99" class="mono muted-text" font-size="8">AUTONOMOUS MISSION CONTROL</text>
+
+  <!-- Cluster Badge -->
+  <rect x="290" y="77" width="135" height="22" rx="11" fill="#101726" stroke="#1e293b" stroke-width="1" />
+  <circle cx="304" cy="88" r="3.5" fill="#10b981" />
+  <text x="316" y="92" class="mono" font-size="10" fill="#94a3b8">US-EAST-01</text>
+  <rect x="382" y="81" width="36" height="14" rx="3" fill="#10b981" fill-opacity="0.15" />
+  <text x="400" y="91" text-anchor="middle" class="mono" font-size="8" fill="#10b981" font-weight="700">LIVE</text>
+
+  <!-- Navigation Links -->
+  <g transform="translate(450, 77)">
+    <rect x="0" y="0" width="76" height="24" rx="6" fill="#4cd7f6" fill-opacity="0.15" stroke="#4cd7f6" stroke-width="1" />
+    <text x="38" y="16" text-anchor="middle" class="mono" font-size="10" fill="#4cd7f6" font-weight="700">Overview</text>
+
+    <text x="110" y="16" class="mono" font-size="10" fill="#94a3b8">Fleet (8)</text>
+    <text x="175" y="16" class="mono" font-size="10" fill="#94a3b8">Tasks (14)</text>
+    <text x="245" y="16" class="mono" font-size="10" fill="#94a3b8">Comms</text>
+    <text x="305" y="16" class="mono" font-size="10" fill="#94a3b8">Library</text>
+  </g>
+
+  <!-- Navbar Right Utilities -->
+  <g transform="translate(940, 77)">
+    <rect x="0" y="0" width="65" height="22" rx="6" fill="#101726" stroke="#1e293b" stroke-width="0.8" />
+    <text x="10" y="15" class="mono" font-size="9" fill="#64748b">PING</text>
+    <text x="38" y="15" class="mono" font-size="9" fill="#4cd7f6" font-weight="700">14ms</text>
+
+    <rect x="75" y="0" width="65" height="22" rx="6" fill="#101726" stroke="#1e293b" stroke-width="0.8" />
+    <text x="85" y="15" class="mono" font-size="9" fill="#64748b">CPU</text>
+    <text x="112" y="15" class="mono" font-size="9" fill="#10b981" font-weight="700">28%</text>
+
+    <!-- Operator Avatar -->
+    <circle cx="168" cy="11" r="13" fill="#1e293b" stroke="#4cd7f6" stroke-width="1.5" />
+    <text x="168" y="15" text-anchor="middle" class="mono" font-size="10" fill="#4cd7f6" font-weight="700">OP</text>
+  </g>
+
+  <!-- Dashboard Main Body -->
+  <!-- Top Stat Cards Grid (4 cards) -->
+  <g transform="translate(40, 130)">
+    <!-- Card 1: Active Agents -->
+    <rect x="0" y="0" width="265" height="74" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1" />
+    <text x="16" y="24" class="mono muted-text" font-size="10">AUTONOMOUS AGENTS</text>
+    <text x="16" y="54" class="mono light-text" font-size="24">8</text>
+    <text x="42" y="54" class="mono" font-size="11" fill="#10b981">/ 8 SYNCHRONIZED</text>
+    <circle cx="238" cy="37" r="14" fill="#4cd7f6" fill-opacity="0.1" />
+    <path d="M 234 37 L 242 37 M 238 33 L 238 41" stroke="#4cd7f6" stroke-width="1.5" />
+
+    <!-- Card 2: Active Tasks -->
+    <rect x="285" y="0" width="265" height="74" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1" />
+    <text x="301" y="24" class="mono muted-text" font-size="10">CONCURRENT TASKS</text>
+    <text x="301" y="54" class="mono light-text" font-size="24">14</text>
+    <text x="338" y="54" class="mono" font-size="11" fill="#38bdf8">PIPELINE EXECUTION</text>
+
+    <!-- Card 3: Telemetry Stream -->
+    <rect x="570" y="0" width="265" height="74" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1" />
+    <text x="586" y="24" class="mono muted-text" font-size="10">EVENT THROUGHPUT</text>
+    <text x="586" y="54" class="mono light-text" font-size="24">42.8</text>
+    <text x="645" y="54" class="mono" font-size="11" fill="#a855f7">EVT/SEC</text>
+
+    <!-- Card 4: Memory Headroom -->
+    <rect x="855" y="0" width="265" height="74" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1" />
+    <text x="871" y="24" class="mono muted-text" font-size="10">MEMORY BUFFER</text>
+    <text x="871" y="54" class="mono light-text" font-size="24">1.42</text>
+    <text x="930" y="54" class="mono" font-size="11" fill="#f59e0b">GB / 4.0 GB</text>
+  </g>
+
+  <!-- Left Main Panel: Active Fleet Status -->
+  <g transform="translate(40, 220)">
+    <rect x="0" y="0" width="670" height="395" rx="12" fill="#090d16" stroke="#1e293b" stroke-width="1" />
+    
+    <!-- Panel Header -->
+    <path d="M 0 12 Q 0 0 12 0 L 658 0 Q 670 0 670 12 L 670 42 L 0 42 Z" fill="#0e1320" />
+    <line x1="0" y1="42" x2="670" y2="42" stroke="#1e293b" stroke-width="1" />
+    <text x="18" y="26" class="sans light-text" font-size="13">ACTIVE SWARM AGENT MATRIX</text>
+    <text x="570" y="26" class="mono" font-size="10" fill="#4cd7f6">LIVE STREAM</text>
+    <circle cx="560" cy="22" r="3" fill="#4cd7f6" />
+
+    <!-- Agent Rows -->
+    <!-- Agent 1 -->
+    <g transform="translate(18, 56)">
+      <rect x="0" y="0" width="634" height="66" rx="8" fill="#0f1524" stroke="#1e293b" stroke-width="0.8" />
+      <circle cx="22" cy="33" r="5" fill="#10b981" />
+      <text x="36" y="28" class="sans light-text" font-size="13">Nexus-Prime</text>
+      <text x="36" y="44" class="mono muted-text" font-size="9">ROLE: ARCHITECT &amp; SWARM LEAD • LATENCY: 22ms</text>
+      
+      <rect x="360" y="23" width="90" height="20" rx="4" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-width="0.5" />
+      <text x="405" y="37" text-anchor="middle" class="mono" font-size="9" fill="#60a5fa">Gemini 2.5 Flash</text>
+
+      <rect x="460" y="23" width="75" height="20" rx="4" fill="#10b981" fill-opacity="0.15" />
+      <text x="497" y="37" text-anchor="middle" class="mono" font-size="9" fill="#34d399">EXECUTING</text>
+
+      <text x="585" y="37" class="mono" font-size="11" fill="#94a3b8">98.4% QoS</text>
+    </g>
+
+    <!-- Agent 2 -->
+    <g transform="translate(18, 134)">
+      <rect x="0" y="0" width="634" height="66" rx="8" fill="#0f1524" stroke="#1e293b" stroke-width="0.8" />
+      <circle cx="22" cy="33" r="5" fill="#10b981" />
+      <text x="36" y="28" class="sans light-text" font-size="13">Cipher-7</text>
+      <text x="36" y="44" class="mono muted-text" font-size="9">ROLE: CODE SYNTHESIS &amp; REFACTOR • LATENCY: 34ms</text>
+      
+      <rect x="360" y="23" width="90" height="20" rx="4" fill="#8b5cf6" fill-opacity="0.15" stroke="#8b5cf6" stroke-width="0.5" />
+      <text x="405" y="37" text-anchor="middle" class="mono" font-size="9" fill="#c084fc">Claude 3.7 Sonnet</text>
+
+      <rect x="460" y="23" width="75" height="20" rx="4" fill="#10b981" fill-opacity="0.15" />
+      <text x="497" y="37" text-anchor="middle" class="mono" font-size="9" fill="#34d399">EXECUTING</text>
+
+      <text x="585" y="37" class="mono" font-size="11" fill="#94a3b8">99.1% QoS</text>
+    </g>
+
+    <!-- Agent 3 -->
+    <g transform="translate(18, 212)">
+      <rect x="0" y="0" width="634" height="66" rx="8" fill="#0f1524" stroke="#1e293b" stroke-width="0.8" />
+      <circle cx="22" cy="33" r="5" fill="#f59e0b" />
+      <text x="36" y="28" class="sans light-text" font-size="13">Aegis-Shield</text>
+      <text x="36" y="44" class="mono muted-text" font-size="9">ROLE: SECURITY AUDIT &amp; SANDBOX • LATENCY: 18ms</text>
+      
+      <rect x="360" y="23" width="90" height="20" rx="4" fill="#0284c7" fill-opacity="0.15" stroke="#0284c7" stroke-width="0.5" />
+      <text x="405" y="37" text-anchor="middle" class="mono" font-size="9" fill="#38bdf8">DeepSeek R1</text>
+
+      <rect x="460" y="23" width="75" height="20" rx="4" fill="#f59e0b" fill-opacity="0.15" />
+      <text x="497" y="37" text-anchor="middle" class="mono" font-size="9" fill="#fbbf24">ANALYZING</text>
+
+      <text x="585" y="37" class="mono" font-size="11" fill="#94a3b8">97.8% QoS</text>
+    </g>
+
+    <!-- Agent 4 -->
+    <g transform="translate(18, 290)">
+      <rect x="0" y="0" width="634" height="66" rx="8" fill="#0f1524" stroke="#1e293b" stroke-width="0.8" />
+      <circle cx="22" cy="33" r="5" fill="#10b981" />
+      <text x="36" y="28" class="sans light-text" font-size="13">Cortex-9</text>
+      <text x="36" y="44" class="mono muted-text" font-size="9">ROLE: KNOWLEDGE EMBEDDINGS &amp; RAG • LATENCY: 29ms</text>
+      
+      <rect x="360" y="23" width="90" height="20" rx="4" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="0.5" />
+      <text x="405" y="37" text-anchor="middle" class="mono" font-size="9" fill="#6ee7b7">Ollama Llama 3.3</text>
+
+      <rect x="460" y="23" width="75" height="20" rx="4" fill="#38bdf8" fill-opacity="0.15" />
+      <text x="497" y="37" text-anchor="middle" class="mono" font-size="9" fill="#7dd3fc">STANDBY</text>
+
+      <text x="585" y="37" class="mono" font-size="11" fill="#94a3b8">99.7% QoS</text>
+    </g>
+  </g>
+
+  <!-- Right Panel: Live Kanban / Tasks & Activity Pulse -->
+  <g transform="translate(730, 220)">
+    <rect x="0" y="0" width="430" height="395" rx="12" fill="#090d16" stroke="#1e293b" stroke-width="1" />
+    
+    <!-- Header -->
+    <path d="M 0 12 Q 0 0 12 0 L 418 0 Q 430 0 430 12 L 430 42 L 0 42 Z" fill="#0e1320" />
+    <line x1="0" y1="42" x2="430" y2="42" stroke="#1e293b" stroke-width="1" />
+    <text x="18" y="26" class="sans light-text" font-size="13">AUTONOMOUS TASK PIPELINE</text>
+    <text x="340" y="26" class="mono" font-size="10" fill="#a855f7">14 QUEUED</text>
+
+    <!-- Task Cards -->
+    <g transform="translate(16, 56)">
+      <rect x="0" y="0" width="398" height="74" rx="8" fill="#111728" stroke="#334155" stroke-width="0.8" />
+      <rect x="0" y="0" width="4" height="74" rx="2" fill="#10b981" />
+      <text x="16" y="24" class="sans light-text" font-size="12">Audit Dependency Vulnerabilities</text>
+      <text x="16" y="42" class="mono muted-text" font-size="9">TARGET: npm packages • AGENT: Aegis-Shield</text>
+      <rect x="16" y="52" width="280" height="6" rx="3" fill="#1e293b" />
+      <rect x="16" y="52" width="220" height="6" rx="3" fill="#10b981" />
+      <text x="310" y="58" class="mono" font-size="9" fill="#10b981">78%</text>
+    </g>
+
+    <g transform="translate(16, 142)">
+      <rect x="0" y="0" width="398" height="74" rx="8" fill="#111728" stroke="#334155" stroke-width="0.8" />
+      <rect x="0" y="0" width="4" height="74" rx="2" fill="#38bdf8" />
+      <text x="16" y="24" class="sans light-text" font-size="12">Synthesize Vector Embeddings for Docs</text>
+      <text x="16" y="42" class="mono muted-text" font-size="9">TARGET: /docs/*.md • AGENT: Cortex-9</text>
+      <rect x="16" y="52" width="280" height="6" rx="3" fill="#1e293b" />
+      <rect x="16" y="52" width="140" height="6" rx="3" fill="#38bdf8" />
+      <text x="310" y="58" class="mono" font-size="9" fill="#38bdf8">50%</text>
+    </g>
+
+    <g transform="translate(16, 228)">
+      <rect x="0" y="0" width="398" height="74" rx="8" fill="#111728" stroke="#334155" stroke-width="0.8" />
+      <rect x="0" y="0" width="4" height="74" rx="2" fill="#a855f7" />
+      <text x="16" y="24" class="sans light-text" font-size="12">Execute Integration Benchmark Suite</text>
+      <text x="16" y="42" class="mono muted-text" font-size="9">TARGET: cluster-rpc-suite • AGENT: Nexus-Prime</text>
+      <rect x="16" y="52" width="280" height="6" rx="3" fill="#1e293b" />
+      <rect x="16" y="52" width="90" height="6" rx="3" fill="#a855f7" />
+      <text x="310" y="58" class="mono" font-size="9" fill="#c084fc">32%</text>
+    </g>
+
+    <!-- Mini Telemetry Sparkline -->
+    <g transform="translate(16, 316)">
+      <rect x="0" y="0" width="398" height="64" rx="8" fill="#0a0e1a" stroke="#1e293b" stroke-width="0.8" />
+      <text x="14" y="22" class="mono muted-text" font-size="9">CLUSTER REAL-TIME LOAD MONITOR</text>
+      <!-- Sparkline path -->
+      <path d="M 14 50 L 50 46 L 90 40 L 130 48 L 170 34 L 210 38 L 250 28 L 290 32 L 330 24 L 370 28 L 390 20" 
+            fill="none" stroke="#4cd7f6" stroke-width="2" />
+      <circle cx="390" cy="20" r="3.5" fill="#4cd7f6" />
+    </g>
+  </g>
+</svg>

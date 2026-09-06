@@ -156,11 +156,11 @@ export interface ChatMessage {
 export interface ArtifactItem {
   id: string;
   name: string;
-  extension: 'MD' | 'PY' | 'JSON' | 'PARQUET' | 'YAML' | 'PDF' | 'CSV';
+  extension: 'MD' | 'PY' | 'JSON' | 'PARQUET' | 'YAML' | 'PDF' | 'CSV' | 'DOCX' | 'XLSX' | 'PPTX' | 'PNG' | 'JPG' | 'SVG' | 'WEBP' | string;
   agent: string;
-  agentIcon: string;
+  agentIcon?: string;
   size: string;
-  status: 'Vectorized' | 'In Cache' | 'Cold Storage';
+  status: 'Vectorized' | 'In Cache' | 'Cold Storage' | 'HOT_MEMORY' | string;
   timestamp: string;
   sha: string;
   lineCount?: number;
@@ -169,6 +169,106 @@ export interface ArtifactItem {
   reductionStat?: string;
   fidelityStat?: string;
   rawContent?: string;
+  imageUrl?: string;
+  imageMetadata?: {
+    dimensions: string;
+    colorProfile?: string;
+    colorSpace?: string;
+    cameraSensor?: string;
+    sensorCamera?: string;
+    aspectRatio?: string;
+    bitDepth?: string;
+    focalLength?: string;
+    iso?: string;
+    exposure?: string;
+    colorHistogram?: number[];
+  };
+  spreadsheetData?: {
+    sheets: {
+      name: string;
+      headers: string[];
+      rows: (string | number)[][];
+    }[];
+  };
+  presentationData?: {
+    slides: {
+      id: number;
+      title: string;
+      subtitle?: string;
+      bullets?: string[];
+      visualType?: 'architecture' | 'metrics' | 'timeline' | 'quote' | 'diagram';
+      notes?: string;
+    }[];
+  };
+  docxData?: {
+    title: string;
+    subtitle?: string;
+    organization: string;
+    confidentiality: string;
+    date: string;
+    author: string;
+    pages: {
+      pageNum: number;
+      sections: {
+        heading?: string;
+        paragraphs: string[];
+        table?: {
+          headers: string[];
+          rows: string[][];
+        };
+      }[];
+    }[];
+  };
+  pdfData?: any;
+}
+
+export type RoutingStrategy = 
+  | 'intent-affinity' 
+  | 'least-loaded' 
+  | 'round-robin' 
+  | 'priority-urgency' 
+  | 'context-window-fit';
+
+export interface FleetRoutingRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  conditionType: 'topic_keyword' | 'priority_level' | 'token_budget' | 'task_type' | 'model_affinity' | 'regex';
+  conditionValue: string;
+  targetFleetId: string;
+  targetAgentId?: string;
+  fallbackFleetId: string;
+  action: 'ROUTE_IMMEDIATE' | 'ROUTE_WITH_CONFIRM' | 'FORK_PARALLEL' | 'DELEGATE_SUPERVISED';
+  description?: string;
+}
+
+export interface FleetHandoffRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  triggerType: 'confidence_threshold' | 'context_exhaustion' | 'error_retry_limit' | 'permission_escalation' | 'sla_breach_warning';
+  triggerOperator: '<' | '>' | '>=' | '==';
+  triggerThreshold: number;
+  unitLabel: string;
+  sourceFleetId: string; // or 'ALL_FLEETS'
+  targetFleetId: string;
+  contextPreservation: 'full_tokens' | 'summarized_kv' | 'state_machine_only';
+  humanApprovalRequired: boolean;
+  autoAckTimeoutSec: number;
+  description: string;
+}
+
+export interface FleetRoutingConfig {
+  defaultStrategy: RoutingStrategy;
+  fallbackFleetId: string;
+  enableCrossFleetHandoffs: boolean;
+  autoEscalateOnP1: boolean;
+  maxHandoffHops: number;
+  heartbeatIntervalSec: number;
+  autoRebalanceOnSaturation?: boolean;
+  routingRules: FleetRoutingRule[];
+  handoffRules: FleetHandoffRule[];
 }
 
 export interface UserProfile {
@@ -220,5 +320,64 @@ export interface CustomThemeConfig {
   glowIntensity: 'none' | 'subtle' | 'high' | 'overclocked';
   glassmorphism: boolean;
   fontScaling: 'compact' | 'standard' | 'spacious';
+}
+
+export interface PortalConnectionSettings {
+  serverUrl: string;
+  protocol: 'HTTP_REST' | 'GRPC_WEB' | 'WEBSOCKET' | 'UNIX_SOCKET';
+  authToken: string;
+  verifyTls: boolean;
+  connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'RECONNECTING' | 'LOCAL_STANDALONE';
+  clusterRegion: string;
+  heartbeatIntervalSec: number;
+  lastHeartbeatPingMs: number;
+}
+
+export interface PortalStorageSettings {
+  libraryFolderPath: string;
+  ipfsGatewayUrl: string;
+  s3BucketEndpoint?: string;
+  storageQuotaGb: number;
+  autoPurgeDays: number;
+  compressOnIngest: boolean;
+  vectorIndexMemoryMb: number;
+}
+
+export interface PortalPreferenceSettings {
+  defaultFleetId: string;
+  defaultLandingTab: TabType;
+  telemetryLogRetention: number;
+  soundAlertsEnabled: boolean;
+  autoRebalanceSatThreshold: number;
+  refreshIntervalSec: number;
+}
+
+export interface PortalBackupSettings {
+  autoBackupSchedule: 'OFF' | 'HOURLY' | 'EVERY_6_HOURS' | 'DAILY' | 'WEEKLY';
+  lastBackupTimestamp?: string;
+  backupTargetLocation: 'LOCAL_DOWNLOAD' | 'SERVER_DISK' | 'S3_REMOTE';
+  includeAgentMemories: boolean;
+  includeArtifactFiles: boolean;
+  encryptBackups: boolean;
+}
+
+export interface PortalBrandingSettings {
+  portalName: string;
+  portalTagline: string;
+  organizationName: string;
+  versionBadge: string;
+  logoIcon: string;
+  customLogoUrl?: string;
+  accentColor: string;
+  footerDisclaimer: string;
+  showOrgBadge: boolean;
+}
+
+export interface PortalSettings {
+  connection: PortalConnectionSettings;
+  storage: PortalStorageSettings;
+  branding: PortalBrandingSettings;
+  preferences: PortalPreferenceSettings;
+  backup: PortalBackupSettings;
 }
 

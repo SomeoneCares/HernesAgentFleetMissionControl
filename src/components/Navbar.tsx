@@ -15,8 +15,14 @@ import {
   MessageSquare,
   FolderGit2,
   Sparkles,
-  Puzzle,
-  User
+  User,
+  Settings,
+  Shield,
+  Flame,
+  Orbit,
+  Cpu,
+  Network,
+  Zap
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -26,8 +32,8 @@ interface NavbarProps {
   onOpenSkins: () => void;
   onOpenSelfHost: () => void;
   onOpenPet?: () => void;
-  onOpenPlugins?: () => void;
   onOpenProfile?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -37,13 +43,42 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSkins,
   onOpenSelfHost,
   onOpenPet,
-  onOpenPlugins,
-  onOpenProfile
+  onOpenProfile,
+  onOpenSettings
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [ping, setPing] = useState(14);
   const { currentSkinMeta } = useTheme();
-  const { activeAgents, activeTasks, operatorProfile } = useCluster();
+  const { activeAgents, activeTasks, operatorProfile, portalSettings } = useCluster();
+
+  const branding = portalSettings?.branding || {
+    portalName: 'HERMES',
+    portalTagline: 'AUTONOMOUS MISSION CONTROL',
+    organizationName: 'SOVEREIGN AGENT CLUSTER',
+    versionBadge: 'OS 4.2',
+    logoIcon: 'Layers',
+    customLogoUrl: '',
+    accentColor: '#4cd7f6',
+    footerDisclaimer: 'HERMES PROTOCOL // AUTONOMOUS AGENT ORCHESTRATION',
+    showOrgBadge: true
+  };
+
+  const renderBrandIcon = (iconName: string, className: string) => {
+    switch (iconName) {
+      case 'Bot': return <Bot className={className} />;
+      case 'Shield': return <Shield className={className} />;
+      case 'Terminal': return <Terminal className={className} />;
+      case 'Flame': return <Flame className={className} />;
+      case 'Sparkles': return <Sparkles className={className} />;
+      case 'Orbit': return <Orbit className={className} />;
+      case 'Cpu': return <Cpu className={className} />;
+      case 'Network': return <Network className={className} />;
+      case 'Zap': return <Zap className={className} />;
+      case 'Layers':
+      default:
+        return <Layers className={className} />;
+    }
+  };
 
   // Periodic subtle ping telemetry variation
   React.useEffect(() => {
@@ -68,24 +103,49 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Brand & Cluster Aura Indicator */}
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <button 
+            id="navbar-brand-logo-btn"
             onClick={() => setActiveTab('overview')}
             className="flex items-center gap-3 text-left group cursor-pointer focus:outline-none"
           >
-            <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400/20 to-cyan-500/5 border border-cyan-400/30 shadow-[0_0_20px_rgba(76,215,246,0.25)] group-hover:border-cyan-400/50 transition-all">
-              <Layers className="w-5 h-5 text-cyan-400" />
+            <div 
+              className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400/20 to-cyan-500/5 border border-cyan-400/30 shadow-[0_0_20px_rgba(76,215,246,0.25)] group-hover:border-cyan-400/50 transition-all overflow-hidden"
+              style={{ borderColor: branding.accentColor ? `${branding.accentColor}55` : undefined }}
+            >
+              {branding.customLogoUrl ? (
+                <img 
+                  src={branding.customLogoUrl} 
+                  alt={branding.portalName} 
+                  className="w-full h-full object-cover p-1"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                renderBrandIcon(branding.logoIcon, "w-5 h-5 text-cyan-400")
+              )}
             </div>
             <div className="flex flex-col">
               <div className="font-bold text-sm tracking-tight text-white flex items-center gap-2">
-                HERMES
-                <span className="text-[9px] font-mono font-medium tracking-widest text-cyan-400/90 uppercase px-1.5 py-0.5 rounded bg-cyan-400/10 border border-cyan-400/20">
-                  OS 4.2
+                <span className="truncate max-w-[120px] sm:max-w-none">{branding.portalName || 'HERMES'}</span>
+                <span 
+                  className="text-[9px] font-mono font-medium tracking-widest text-cyan-400/90 uppercase px-1.5 py-0.5 rounded bg-cyan-400/10 border border-cyan-400/20 whitespace-nowrap"
+                  style={{ color: branding.accentColor, borderColor: `${branding.accentColor}40`, backgroundColor: `${branding.accentColor}15` }}
+                >
+                  {branding.versionBadge || 'OS 4.2'}
                 </span>
               </div>
-              <span className="font-mono text-[9px] sm:text-[10px] text-slate-400 tracking-wider uppercase">
-                AUTONOMOUS MISSION CONTROL
+              <span className="font-mono text-[9px] sm:text-[10px] text-slate-400 tracking-wider uppercase truncate max-w-[160px] sm:max-w-none">
+                {branding.portalTagline || 'AUTONOMOUS MISSION CONTROL'}
               </span>
             </div>
           </button>
+
+          {branding.showOrgBadge && branding.organizationName && (
+            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.08]">
+              <Shield className="w-3 h-3 text-cyan-400" />
+              <span className="font-mono text-[10px] font-medium tracking-wide text-slate-300 uppercase">
+                {branding.organizationName}
+              </span>
+            </div>
+          )}
 
           <div className="h-4 w-px bg-white/10 hidden md:block" />
 
@@ -95,7 +155,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#4edea3]"></span>
             </span>
-            <span className="font-mono text-[10px] font-medium tracking-wide text-slate-300">US-EAST-CORE-01</span>
+            <span className="font-mono text-[10px] font-medium tracking-wide text-slate-300">
+              {portalSettings?.connection?.clusterRegion || 'US-EAST-CORE-01'}
+            </span>
             <span className="text-[9px] font-mono text-emerald-400 px-1 bg-emerald-400/10 rounded font-semibold">OPTIMAL</span>
           </div>
 
@@ -176,16 +238,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* 5. Custom Plugins Launcher */}
-          {onOpenPlugins && (
+          {/* 5. Portal & Cluster Settings Launcher */}
+          {onOpenSettings && (
             <button
-              onClick={onOpenPlugins}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all text-xs font-mono cursor-pointer group"
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer group"
               type="button"
-              title="Custom UI Plugins & CSS"
+              title="Portal & Cluster Settings (Server RPC, Storage, Swarm Defaults, Plugins, Snapshots)"
             >
-              <Puzzle className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden lg:inline font-medium">Plugins</span>
+              <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 group-hover:rotate-90 transition-transform duration-300" />
+              <span className="hidden xl:inline font-medium">Settings</span>
             </button>
           )}
 

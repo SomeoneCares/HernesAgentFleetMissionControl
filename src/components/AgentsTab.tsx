@@ -27,8 +27,10 @@ import {
   ChevronDown,
   FileCode,
   Sparkles,
-  Camera
+  Camera,
+  ArrowRightLeft
 } from 'lucide-react';
+import { FleetRoutingModal } from './FleetRoutingModal';
 
 export const AgentsTab: React.FC = () => {
   const { 
@@ -51,6 +53,7 @@ export const AgentsTab: React.FC = () => {
 
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isCreateFleetOpen, setIsCreateFleetOpen] = useState(false);
+  const [isRoutingModalOpen, setIsRoutingModalOpen] = useState(false);
   const [fleetsPaused, setFleetsPaused] = useState(false);
   const [activeModalAgent, setActiveModalAgent] = useState<Agent | null>(null);
   const [modalMode, setModalMode] = useState<'logs' | 'memory' | 'sandbox' | 'terminal' | null>(null);
@@ -141,6 +144,16 @@ export const AgentsTab: React.FC = () => {
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
+            <button
+              onClick={() => setIsRoutingModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white border border-cyan-400/30 transition-all flex items-center gap-2 cursor-pointer group"
+              type="button"
+              title="Configure Fleet Routing and Handoff Rules"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-180 transition-transform duration-300" />
+              <span>Routing & Handoff Rules</span>
+            </button>
+
             <button
               onClick={handleAutoBalance}
               disabled={isAutoBalancing}
@@ -660,6 +673,12 @@ export const AgentsTab: React.FC = () => {
           createFleet(newFleet);
           setIsCreateFleetOpen(false);
         }}
+      />
+
+      {/* Fleet Routing & Handoff Settings Modal */}
+      <FleetRoutingModal
+        isOpen={isRoutingModalOpen}
+        onClose={() => setIsRoutingModalOpen(false)}
       />
     </div>
   );

@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useCluster } from '../context/ClusterContext';
-import { ChevronDown, Server, Layers, Plus, Check, Cpu, Shield, Sparkles, Activity } from 'lucide-react';
+import { ChevronDown, Server, Layers, Plus, Check, Cpu, Shield, Sparkles, Activity, ArrowRightLeft, GitFork, Settings } from 'lucide-react';
 import { CreateFleetModal } from './CreateFleetModal';
+import { FleetRoutingModal } from './FleetRoutingModal';
+import { PortalSettingsModal } from './PortalSettingsModal';
 
 export const FleetSelectorDropdown: React.FC = () => {
-  const { fleets, activeFleetId, setActiveFleetId, createFleet, agents, tasks } = useCluster();
+  const { fleets, activeFleetId, setActiveFleetId, createFleet, agents, tasks, routingConfig } = useCluster();
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isRoutingModalOpen, setIsRoutingModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close when clicking outside
@@ -189,16 +193,49 @@ export const FleetSelectorDropdown: React.FC = () => {
               })}
             </div>
 
-            {/* Bottom: Partition New Fleet Action */}
-            <div className="pt-2 mt-2 border-t border-white/[0.08]">
+            {/* Bottom Actions: Partition New Fleet & Routing Rules */}
+            <div className="pt-2 mt-2 border-t border-white/[0.08] flex flex-col gap-1.5">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsRoutingModalOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-xs font-semibold transition-all cursor-pointer group"
+                type="button"
+              >
+                <div className="flex items-center gap-2">
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-180 transition-transform duration-300" />
+                  <span>Fleet Routing & Handoff Rules</span>
+                </div>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-200">
+                  {routingConfig.routingRules.length} Rules
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsSettingsModalOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-cyan-400/30 text-slate-300 hover:text-white text-xs font-medium transition-all cursor-pointer group"
+                type="button"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                  <span>Portal & Daemon Settings</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500">Server & Backup</span>
+              </button>
+
               <button
                 onClick={() => {
                   setIsOpen(false);
                   setIsCreateModalOpen(true);
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 border border-white/10 hover:border-cyan-400/30 text-cyan-400 hover:text-cyan-300 text-xs font-semibold transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 text-slate-300 hover:text-white text-xs font-medium transition-all cursor-pointer"
+                type="button"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 text-slate-400" />
                 <span>Partition New Fleet on Host</span>
               </button>
             </div>
@@ -211,6 +248,18 @@ export const FleetSelectorDropdown: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={createFleet}
+      />
+
+      {/* Modal for fleet routing & handoff rules */}
+      <FleetRoutingModal
+        isOpen={isRoutingModalOpen}
+        onClose={() => setIsRoutingModalOpen(false)}
+      />
+
+      {/* Modal for portal & cluster settings */}
+      <PortalSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
     </>
   );

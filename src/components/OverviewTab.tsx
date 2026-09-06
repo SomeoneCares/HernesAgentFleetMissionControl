@@ -14,18 +14,26 @@ import {
   Lock,
   Search,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  GitFork,
+  ArrowRightLeft,
+  Sliders,
+  Settings
 } from 'lucide-react';
+import { FleetRoutingModal } from './FleetRoutingModal';
+import { PortalSettingsModal } from './PortalSettingsModal';
 
 interface OverviewTabProps {
   onNavigateTab?: (tab: TabType) => void;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({ onNavigateTab }) => {
-  const { events, setEvents } = useCluster();
+  const { events, setEvents, routingConfig, fleets } = useCluster();
   const [activeFilter, setActiveFilter] = useState<string>('All Events');
   const [commandInput, setCommandInput] = useState<string>('');
   const [commandOutput, setCommandOutput] = useState<string | null>(null);
+  const [isRoutingModalOpen, setIsRoutingModalOpen] = useState<boolean>(false);
+  const [isPortalSettingsOpen, setIsPortalSettingsOpen] = useState<boolean>(false);
 
   // Filter events
   const filteredEvents = events.filter(evt => {
@@ -531,6 +539,68 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ onNavigateTab }) => {
               </span>
             </div>
           </section>
+
+          {/* Fleet Swarm Routing & Handoff Topology Card */}
+          <section className="rounded-2xl bg-[#101622]/65 backdrop-blur-2xl border border-white/[0.08] p-7 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
+              <div>
+                <span className="font-mono text-xs tracking-widest text-cyan-400 uppercase font-medium">DISPATCH TOPOLOGY</span>
+                <h4 className="text-lg font-bold text-white tracking-tight">Fleet Routing & Handoff</h4>
+              </div>
+              <span className="font-mono text-[10px] uppercase px-2.5 py-1 rounded-full bg-cyan-400/10 text-cyan-300 border border-cyan-400/20 font-semibold">
+                {routingConfig.defaultStrategy}
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-3 font-mono text-xs">
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <GitFork className="w-4 h-4 text-cyan-400" />
+                  <span>Routing Ingress Rules</span>
+                </div>
+                <span className="font-bold text-white px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                  {routingConfig.routingRules.length} Active
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <ArrowRightLeft className="w-4 h-4 text-purple-400" />
+                  <span>Autonomous Handoff Triggers</span>
+                </div>
+                <span className="font-bold text-white px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                  {routingConfig.handoffRules.length} Active
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between text-[11px] text-slate-400">
+                <span>Auto-Rebalance Load</span>
+                <span className={routingConfig.autoRebalanceOnSaturation ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                  {routingConfig.autoRebalanceOnSaturation ? 'ENABLED (90% Cap)' : 'DISABLED'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-5">
+              <button
+                onClick={() => setIsRoutingModalOpen(true)}
+                className="py-2.5 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/30 text-xs font-mono font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(76,215,246,0.15)]"
+                type="button"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Routing & Handoff</span>
+              </button>
+
+              <button
+                onClick={() => setIsPortalSettingsOpen(true)}
+                className="py-2.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/[0.08] hover:border-cyan-400/30 text-xs font-mono font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                type="button"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400" />
+                <span>Portal & Daemon</span>
+              </button>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -648,6 +718,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ onNavigateTab }) => {
           </button>
         </form>
       </section>
+
+      {/* Fleet Routing & Handoff Configuration Modal */}
+      <FleetRoutingModal
+        isOpen={isRoutingModalOpen}
+        onClose={() => setIsRoutingModalOpen(false)}
+      />
+
+      {/* Portal & Cluster Settings Modal */}
+      <PortalSettingsModal
+        isOpen={isPortalSettingsOpen}
+        onClose={() => setIsPortalSettingsOpen(false)}
+      />
     </div>
   );
 };

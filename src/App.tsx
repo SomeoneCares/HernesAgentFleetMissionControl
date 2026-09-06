@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabType } from './types';
 import { ThemeProvider } from './context/ThemeContext';
 import { ClusterProvider, useCluster } from './context/ClusterContext';
@@ -21,20 +21,27 @@ import { SkinSelectorModal } from './components/SkinSelectorModal';
 import { SelfHostModal } from './components/SelfHostModal';
 import { CyberPet } from './components/CyberPet';
 import { CyberPetModal } from './components/CyberPetModal';
-import { PluginsModal } from './components/PluginsModal';
 import { OperatorProfileModal } from './components/OperatorProfileModal';
+import { PortalSettingsModal } from './components/PortalSettingsModal';
 import { Zap, CheckCircle2 } from 'lucide-react';
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const { toast, portalSettings } = useCluster();
+  const [activeTab, setActiveTab] = useState<TabType>(() => portalSettings?.preferences?.defaultLandingTab || 'overview');
   const [isCliOpen, setIsCliOpen] = useState<boolean>(false);
   const [isSkinsOpen, setIsSkinsOpen] = useState<boolean>(false);
   const [isSelfHostOpen, setIsSelfHostOpen] = useState<boolean>(false);
   const [isPetModalOpen, setIsPetModalOpen] = useState<boolean>(false);
-  const [isPluginsModalOpen, setIsPluginsModalOpen] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  
-  const { toast } = useCluster();
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [settingsTab, setSettingsTab] = useState<'connection' | 'storage' | 'branding' | 'preferences' | 'plugins' | 'backup'>('connection');
+
+  // Synchronize document title with dynamic portal branding
+  useEffect(() => {
+    if (portalSettings?.branding?.portalName) {
+      document.title = `${portalSettings.branding.portalName} • ${portalSettings.branding.portalTagline || 'Autonomous Mission Control'}`;
+    }
+  }, [portalSettings?.branding?.portalName, portalSettings?.branding?.portalTagline]);
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-cyan-500/20 selection:text-cyan-400 relative overflow-x-hidden transition-colors duration-200">
@@ -51,8 +58,11 @@ function AppContent() {
         onOpenSkins={() => setIsSkinsOpen(true)}
         onOpenSelfHost={() => setIsSelfHostOpen(true)}
         onOpenPet={() => setIsPetModalOpen(true)}
-        onOpenPlugins={() => setIsPluginsModalOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenSettings={() => {
+          setSettingsTab('connection');
+          setIsSettingsOpen(true);
+        }}
       />
 
       {/* Main Content Area */}
@@ -94,16 +104,17 @@ function AppContent() {
         onClose={() => setIsPetModalOpen(false)}
       />
 
-      {/* Custom UI Plugins & CSS Injection Modal */}
-      <PluginsModal
-        isOpen={isPluginsModalOpen}
-        onClose={() => setIsPluginsModalOpen(false)}
-      />
-
       {/* Operator Profile & Avatar Photo Modal */}
       <OperatorProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      {/* Portal & Cluster Settings Modal (Includes Plugins & Extensions) */}
+      <PortalSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        initialTab={settingsTab}
       />
 
       {/* Global Task/Pipeline Action Toast */}

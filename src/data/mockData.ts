@@ -1,4 +1,4 @@
-import { Agent, ModelOption, ActivityEvent, TaskItem, ChatMessage, ArtifactItem, Fleet } from '../types';
+import { Agent, ModelOption, ActivityEvent, TaskItem, ChatMessage, ArtifactItem, Fleet, FleetRoutingConfig } from '../types';
 
 export const INITIAL_FLEETS: Fleet[] = [
   {
@@ -635,6 +635,7 @@ asyncio.run(stream_telemetry())`
 ];
 
 export const INITIAL_ARTIFACTS: ArtifactItem[] = [
+  // 1. Markdown (.MD)
   {
     id: 'art-1',
     name: 'kv-cache-optimization-v3.md',
@@ -656,6 +657,13 @@ export const INITIAL_ARTIFACTS: ArtifactItem[] = [
 This document defines the high-throughput paging mechanism for Hermes cluster workers.
 When dialogue horizons exceed 64,000 tokens, attention weight decay allows tier-2 memory eviction.
 
+### Key Architectural Benchmarks
+| Node Cluster | Context Tokens | Baseline VRAM | Paged Attention VRAM | Delta |
+| :--- | :--- | :--- | :--- | :--- |
+| Node-01 (US-EAST) | 128,000 | 74.2 GB | 26.5 GB | **-64.2%** |
+| Node-02 (EU-WEST) | 65,536 | 39.8 GB | 14.1 GB | **-64.5%** |
+| Node-03 (APAC) | 32,768 | 21.0 GB | 7.9 GB | **-62.3%** |
+
 \`\`\`python
 import torch
 from hermes.engine.memory import PagedAttentionPool, EvictionPriority
@@ -665,9 +673,362 @@ pool = PagedAttentionPool(
     max_context_window=131072,
     eviction_policy=EvictionPriority.HERMES_TEMPORAL_DECAY
 )
+# Allocation complete
+print("[HERMES MEMORY] Paging initialized successfully")
 \`\`\`
+
+- [x] Memory kernel validated on H100 SXM5
+- [x] Zero loss in semantic recall precision on 10,000 needles benchmark
+- [ ] Deploy automatic tier-3 cold storage fallback
 `
   },
+  // 2. Word Document (.DOCX)
+  {
+    id: 'art-docx-1',
+    name: 'autonomous-agent-sla-and-security-charter.docx',
+    extension: 'DOCX',
+    agent: 'Hermes Prime // Orchestrator',
+    agentIcon: 'psychology',
+    size: '1.8 MB',
+    status: 'Vectorized',
+    timestamp: '28m ago (14:04)',
+    sha: '3c89f..a1',
+    lineCount: 1840,
+    previewSummary: 'Official enterprise charter specifying autonomous agent operational boundaries, SLA compliance thresholds, cryptographic audit trails, and human-in-the-loop escalation gates.',
+    docxData: {
+      title: 'Hermes Autonomous Agent Swarm Operating Charter',
+      subtitle: 'Cluster Governance, Service Level Agreements & Security Guardrails',
+      organization: 'Hermes Mission Control // Deep Autonomous Systems Group',
+      confidentiality: 'RESTRICTED / OPERATOR CLEARANCE REQUIRED',
+      date: 'September 2026',
+      author: 'Basem Alsaeed, Master Cluster Architect',
+      pages: [
+        {
+          pageNum: 1,
+          sections: [
+            {
+              heading: '1. Executive Statement of Purpose',
+              paragraphs: [
+                'This formal operating charter establishes binding operational constraints and autonomy parameters for all neural agents operating across the Hermes cluster host infrastructure.',
+                'Under standard mission profiles, autonomous subtask execution is authorized without prior human sign-off provided that token expenditure remains under allocated budget thresholds and cryptographic checksums verify sandbox containment.'
+              ]
+            },
+            {
+              heading: '2. Multi-Tier Service Level Objectives (SLOs)',
+              paragraphs: [
+                'All autonomous agents must adhere to strict latency bounds and uptime criteria. Breach of tier-1 SLO immediately trips automated fleet handoffs and notifies the primary operator.'
+              ],
+              table: {
+                headers: ['Mission Tier', 'Target Latency', 'Availability SLO', 'Allowed Handoff Hops'],
+                rows: [
+                  ['Tier 1: Critical Orchestration', '< 25ms p99', '99.99%', 'Max 1 Hop'],
+                  ['Tier 2: Code Synthesis & Builds', '< 120ms p95', '99.95%', 'Max 3 Hops'],
+                  ['Tier 3: Asynchronous Research', '< 800ms p90', '99.50%', 'Max 5 Hops']
+                ]
+              }
+            }
+          ]
+        },
+        {
+          pageNum: 2,
+          sections: [
+            {
+              heading: '3. Zero-Trust Security Enforcement',
+              paragraphs: [
+                'No agent within any partitioned fleet may execute system-level binary modifications, credential extraction, or external socket binding without signed token authorization from the master operator.',
+                'The Security Sentinel fleet continuously monitors all stdout/stderr streams via hardware-isolated TAP interfaces to intercept potential prompt injections, data exfiltration vectors, or unauthorized resource consumption.'
+              ]
+            },
+            {
+              heading: '4. Ratification and Operator Sign-Off',
+              paragraphs: [
+                'Authorized by Operator OP-7740. All fleet nodes have synchronized this charter into active state vectors. Automated enforcement active.'
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  // 3. Excel Spreadsheet (.XLSX)
+  {
+    id: 'art-xlsx-1',
+    name: 'cluster-gpu-cost-and-vram-allocation-q3.xlsx',
+    extension: 'XLSX',
+    agent: 'DataWeaver // Pipeline Synthesizer',
+    agentIcon: 'database',
+    size: '890 KB',
+    status: 'In Cache',
+    timestamp: '45m ago (13:47)',
+    sha: '9d21e..ff',
+    lineCount: 3500,
+    previewSummary: 'Interactive financial ledger and telemetry ledger breaking down VRAM allocation, electricity consumption, token burning rates, and compute costs across all four operational fleets.',
+    spreadsheetData: {
+      sheets: [
+        {
+          name: 'Fleet_VRAM_Allocation',
+          headers: ['Fleet Partition', 'Host Node', 'GPU Cores', 'Allocated VRAM', 'Active Agents', 'Utilization %', 'Thermal Avg'],
+          rows: [
+            ['Alpha Core Fleet', 'node-01.us-east.h100', '8x H100 SXM5', '68.4 / 80 GB', 'Hermes Prime + OpsSentry', '85.5%', '54°C'],
+            ['Dev & Code Fleet', 'node-02.us-east.h100', '8x H100 SXM5', '52.1 / 80 GB', 'CodeSynthesizer + GitWorker', '65.1%', '51°C'],
+            ['Research Oracle Fleet', 'node-03.eu-west.h100', '8x H100 SXM5', '61.8 / 80 GB', 'ResearchOracle + Citation', '77.2%', '58°C'],
+            ['Security Sentinel Fleet', 'node-04.us-east.h100', '4x L40S Tensor', '24.0 / 48 GB', 'SecuritySentinel + Redact', '50.0%', '42°C'],
+            ['TOTALS / FLEET SUMMARY', '4 Distributed Clusters', '28 GPUs Total', '206.3 / 288 GB', '8 Primary Agents', '71.6% Avg', '51.2°C']
+          ]
+        },
+        {
+          name: 'Token_Burn_&_Cost',
+          headers: ['Date Interval', 'Prompt Tokens (M)', 'Completion Tokens (M)', 'Cached Tokens (M)', 'API Equiv Cost', 'Local Server Cost', 'Total Net Savings'],
+          rows: [
+            ['2026-09-01 (Mon)', '412.5M', '98.2M', '240.1M', '$1,840.50', '$142.10', '$1,698.40'],
+            ['2026-09-02 (Tue)', '520.1M', '114.6M', '310.4M', '$2,310.20', '$142.10', '$2,168.10'],
+            ['2026-09-03 (Wed)', '489.0M', '105.8M', '280.9M', '$2,150.00', '$142.10', '$2,007.90'],
+            ['2026-09-04 (Thu)', '601.4M', '135.2M', '390.2M', '$2,780.40', '$142.10', '$2,638.30'],
+            ['2026-09-05 (Today)', '380.2M', '84.0M', '225.0M', '$1,620.00', '$142.10', '$1,477.90'],
+            ['Q3 CUMULATIVE', '2,403.2M', '537.8M', '1,446.6M', '$10,701.10', '$710.50', '$9,990.60']
+          ]
+        },
+        {
+          name: 'Model_Throughput_Bench',
+          headers: ['Model ID', 'Quantization', 'Inference Engine', 'Prompt TPS', 'Generation TPS', 'First-Token Latency'],
+          rows: [
+            ['hermes-3-405b-instruct', 'FP8 Native', 'vLLM Speculative Engine', '1,420 TPS', '72.4 TPS', '18.2ms'],
+            ['hermes-3-70b-fp8', 'FP8 High-Precision', 'TensorRT-LLM', '2,850 TPS', '144.8 TPS', '11.5ms'],
+            ['qwen-2-5-coder-32b', 'AWQ 4-bit', 'vLLM Kernel', '3,900 TPS', '182.0 TPS', '8.4ms'],
+            ['hermes-2-pro-8b-guard', 'FP16 Dedicated', 'ONNX Runtime CPU', '6,200 TPS', '280.5 TPS', '3.8ms']
+          ]
+        }
+      ]
+    }
+  },
+  // 4. PowerPoint Presentation (.PPTX)
+  {
+    id: 'art-pptx-1',
+    name: 'hermes-mission-control-architecture-keynote.pptx',
+    extension: 'PPTX',
+    agent: 'Basem Alsaeed // Lead Architect',
+    agentIcon: 'terminal',
+    size: '4.6 MB',
+    status: 'In Cache',
+    timestamp: '1h 10m ago',
+    sha: '8a11b..04',
+    lineCount: 450,
+    previewSummary: 'Executive presentation deck covering Hermes Mission Control unified dashboard, multi-fleet partitioning, zero-downtime hot swapping, cybernetic UI customization, and WebRTC real-time comms.',
+    presentationData: {
+      slides: [
+        {
+          id: 1,
+          title: 'Hermes Mission Control',
+          subtitle: 'Federated Autonomous Agent Fleet Architecture // Q3 2026',
+          visualType: 'quote',
+          bullets: [
+            'Next-generation command & control interface for distributed neural agents',
+            'Zero auxiliary server footprint — runs directly alongside host agent runtimes',
+            'Seamless operator supervision with sub-20ms telemetry feedback loops'
+          ],
+          notes: 'Open by highlighting how this unified UI replaces fragmented CLI scripts and standalone monitoring tools.'
+        },
+        {
+          id: 2,
+          title: 'Multi-Fleet Autonomous Partitioning',
+          subtitle: 'Isolating Workloads Across Dedicated GPU Clusters',
+          visualType: 'architecture',
+          bullets: [
+            'Alpha Core: Master orchestration, global memory, and high-level routing',
+            'Dev & Code: Pull request synthesis, linting, and automated testing swarms',
+            'Research Oracle: Arxiv crawler, vector embeddings, and mathematical proof validation',
+            'Security Sentinel: Hardware-isolated zero-trust filtering and prompt defense'
+          ],
+          notes: 'Explain that operators can dynamically reassign agents or partition new fleets without restarting nodes.'
+        },
+        {
+          id: 3,
+          title: 'Dynamic Routing & Intelligent Handoffs',
+          subtitle: 'Zero-Latency Cross-Fleet Task Delegation',
+          visualType: 'timeline',
+          bullets: [
+            'Intent Affinity Matrix: Automatically classifies prompt domain to target fleet',
+            'Autonomous Handoff Triggers: Low confidence (<72%) triggers escalation',
+            'Context Window Compaction: Automatic handoff when token horizon exceeds 85%',
+            'Circuit Breakers: Intercepts repeated tool failures and requests operator guidance'
+          ],
+          notes: 'Showcase the new Fleet Routing and Handoff modal with interactive rule simulations.'
+        },
+        {
+          id: 4,
+          title: 'System Telemetry & Cost Optimization',
+          subtitle: 'Real-Time Benchmarks & Token Savings',
+          visualType: 'metrics',
+          bullets: [
+            '91.0% VRAM Efficiency achieved via KV-Cache temporal decay paging',
+            '64.2% Reduction in peak memory consumption during 128k long-context dialogues',
+            'Estimated $9,990+ weekly infrastructure savings vs cloud proprietary APIs',
+            'WebRTC low-latency audio/video communication channel built-in'
+          ],
+          notes: 'Direct attention to the live telemetry charts and the comprehensive content library previewers.'
+        },
+        {
+          id: 5,
+          title: 'Roadmap & Future Horizons',
+          subtitle: 'Pushing Towards Complete Sovereign Autonomy',
+          visualType: 'diagram',
+          bullets: [
+            'Phase 1: Multi-Fleet UI & Real-Time Comms (Shipped & Active)',
+            'Phase 2: Decentralized P2P Mesh Inter-Cluster Synchronization',
+            'Phase 3: Autonomous LoRA Adapter Fine-Tuning Loops in Background VRAM',
+            'Phase 4: Fully air-gapped sovereign hardware enclosures'
+          ],
+          notes: 'Wrap up with Q&A and invitation to customize theme skins and test the cyber pet companion.'
+        }
+      ]
+    }
+  },
+  // 5. PDF Document (.PDF)
+  {
+    id: 'art-pdf-1',
+    name: 'speculative-decoding-distributed-agent-swarms.pdf',
+    extension: 'PDF',
+    agent: 'ResearchOracle // Telemetry Scout',
+    agentIcon: 'travel_explore',
+    size: '2.4 MB',
+    status: 'Vectorized',
+    timestamp: '2h ago (12:30)',
+    sha: '5b90f..33',
+    lineCount: 2200,
+    previewSummary: 'Formal academic paper detailing speculative decoding speedups in multi-agent asynchronous conversational topologies, complete with mathematical theorems, latency tables, and benchmark proofs.',
+    pdfData: {
+      totalPages: 4,
+      title: 'Speculative Decoding & State Paging in Distributed Autonomous Agent Swarms',
+      authors: 'Hermes Research Group, Basem Alsaeed, Deep Autonomous Systems Lab',
+      affiliation: 'Hermes Autonomous Systems Initiative // Technical Report TR-2026-09',
+      abstractText: 'In long-horizon multi-agent dialogues exceeding 128,000 context tokens, standard autoregressive inference exhibits severe memory bandwidth bottlenecks. We introduce a federated speculative decoding protocol utilizing lightweight draft workers (Hermes 2 Pro 8B) running in lockstep with a 405B teacher model. Empirical evaluations on an 8x H100 SXM5 cluster demonstrate a 3.1x throughput acceleration while preserving 99.88% output fidelity.',
+      pages: [
+        {
+          pageNum: 1,
+          header: 'SECTION 1: INTRODUCTION & DISTRIBUTED TOPOLOGY',
+          sections: [
+            {
+              heading: '1. Introduction and Background',
+              paragraphs: [
+                'Autonomous multi-agent swarms operate under dynamic conversational topologies where context accumulation grows quadratically across turns.',
+                'Existing transformer deployments typically suffer from memory-bound memory stall cycles during key-value generation phases.'
+              ]
+            },
+            {
+              heading: '2. Mathematical Formulation',
+              paragraphs: [
+                'Let M_target denote the primary 405B parameter model and M_draft denote the localized 8B draft verification network. The speculative acceptance ratio alpha is given by:'
+              ],
+              mathEq: '\\alpha = \\min\\left(1, \\frac{P_{\\text{target}}(x_{t+k} \\mid x_{<t+k})}{P_{\\text{draft}}(x_{t+k} \\mid x_{<t+k})}\\right)',
+              highlightBox: 'Theorem 1 (Zero-Degradation Invariance): When rejected tokens are resampled from the normalized residual distribution, the output distribution of the swarm is mathematically identical to direct sampling from M_target.'
+            }
+          ]
+        },
+        {
+          pageNum: 2,
+          header: 'SECTION 2: MEMORY HIERARCHY & ATTENTION COMPACTION',
+          sections: [
+            {
+              heading: '3. Hierarchical KV Paging Protocol',
+              paragraphs: [
+                'We subdivide active GPU memory into hot, warm, and cold tiers. Hot memory retains immediate dialogue turns, whereas older memory blocks undergo temporal attention decay.',
+                'When attention decay exceeds threshold lambda, blocks are paged to host system RAM via high-bandwidth PCIe Gen 5 interfaces without interrupting active token generation.'
+              ]
+            },
+            {
+              heading: '4. Experimental Setup',
+              paragraphs: [
+                'All tests were executed on 4 interconnected host clusters equipped with NVIDIA H100 SXM5 accelerators and NVLink interconnects running vLLM speculative engine v0.6.2.'
+              ],
+              highlightBox: 'Cluster Configuration: 32x H100 80GB SXM5 • RoCE v2 400 Gb/s Networking • Host OS: Ubuntu 24.04 LTS Kernel 6.8'
+            }
+          ]
+        },
+        {
+          pageNum: 3,
+          header: 'SECTION 3: BENCHMARKS & EMPIRICAL RESULTS',
+          sections: [
+            {
+              heading: '5. Empirical Throughput Benchmark',
+              paragraphs: [
+                'Evaluation across 10,000 multi-turn programming, math, and code review dialogues demonstrated consistent speedups across varying context depths.'
+              ],
+              highlightBox: 'Throughput: Baseline 405B = 22.4 TPS • Speculative Drafted = 71.8 TPS (3.2x Acceleration) • Median Acceptance Rate: 78.4%'
+            },
+            {
+              heading: '6. Ablation on Multi-Fleet Handoffs',
+              paragraphs: [
+                'When routing specialized tasks (e.g. security audits or math proofs) to dedicated fine-tuned 70B fleets, overall latency dropped by an additional 41.5% compared to monolithic dispatch.'
+              ]
+            }
+          ]
+        },
+        {
+          pageNum: 4,
+          header: 'SECTION 4: CONCLUSION & REFERENCES',
+          sections: [
+            {
+              heading: '7. Conclusion & Operational Impact',
+              paragraphs: [
+                'We have demonstrated that combining speculative decoding with multi-fleet workload partitioning provides orders-of-magnitude improvements in both throughput and memory efficiency.',
+                'The open implementation has been deployed into Hermes Mission Control v4.2 and is operational across production swarms.'
+              ]
+            },
+            {
+              heading: '8. References',
+              paragraphs: [
+                '[1] Leviathan, Y., et al. "Fast Inference from Transformers via Speculative Decoding." ICML 2023.',
+                '[2] Kwon, W., et al. "Efficient Memory Management for Large Language Models with PagedAttention." SOSP 2023.',
+                '[3] Hermes Autonomous Systems Initiative. "Multi-Fleet Coordination Architecture." TR-2026-04.'
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  // 6. Photos & Graphics (.PNG / .JPG)
+  {
+    id: 'art-photo-1',
+    name: 'sxm5-gpu-rack-thermographic-telemetry.png',
+    extension: 'PNG',
+    agent: 'OpsSentry // Node Watcher',
+    agentIcon: 'shield_with_heart',
+    size: '5.2 MB',
+    status: 'In Cache',
+    timestamp: '3h ago (11:20)',
+    sha: '11fe4..90',
+    lineCount: 1,
+    previewSummary: 'High-resolution thermographic sensor capture of the Node-01 8x H100 SXM5 compute tray operating under peak 128k context speculative decoding load.',
+    imageUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80',
+    imageMetadata: {
+      dimensions: '3840 × 2160 (4K UHD)',
+      colorProfile: 'sRGB IEC61966-2.1',
+      cameraSensor: 'FLIR Industrial Infrared A6700sc MWIR',
+      colorHistogram: [15, 28, 45, 62, 85, 98, 92, 70, 48, 30, 18, 10]
+    }
+  },
+  {
+    id: 'art-photo-2',
+    name: 'satellite-edge-neural-array-optics.jpg',
+    extension: 'JPG',
+    agent: 'ResearchOracle // Telemetry Scout',
+    agentIcon: 'travel_explore',
+    size: '3.8 MB',
+    status: 'Vectorized',
+    timestamp: '4h ago (10:15)',
+    sha: '88c12..3b',
+    lineCount: 1,
+    previewSummary: 'High-altitude optical downlink imagery validating laser interconnect communication between orbital edge server pods and ground station gateway.',
+    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80',
+    imageMetadata: {
+      dimensions: '4096 × 2304 (DCI 4K)',
+      colorProfile: 'Display P3 Wide Gamut',
+      cameraSensor: 'Multispectral Spacecraft Sensor MK-IV',
+      colorHistogram: [8, 19, 32, 54, 78, 95, 88, 64, 42, 22, 14, 6]
+    }
+  },
+  // Existing Code & Config artifacts
   {
     id: 'art-2',
     name: 'patch-async-stream-gateway.py',
@@ -730,3 +1091,141 @@ async def handle_stream(reader, writer):
     previewSummary: 'YAML rule definitions for PII regex masking, canary token alerts, and prompt injection vector classifications.'
   }
 ];
+
+export const INITIAL_FLEET_ROUTING_CONFIG: FleetRoutingConfig = {
+  defaultStrategy: 'intent-affinity',
+  fallbackFleetId: 'fleet-alpha-core',
+  enableCrossFleetHandoffs: true,
+  autoEscalateOnP1: true,
+  maxHandoffHops: 3,
+  heartbeatIntervalSec: 15,
+  routingRules: [
+    {
+      id: 'rule-sec-01',
+      name: 'Zero-Trust & Security Interception',
+      enabled: true,
+      priority: 1,
+      conditionType: 'topic_keyword',
+      conditionValue: 'security, auth, cve, inject, redteam, pii, audit, vulnerability, threat, jailbreak',
+      targetFleetId: 'fleet-sec-sentinel',
+      targetAgentId: 'security-sentinel',
+      fallbackFleetId: 'fleet-alpha-core',
+      action: 'ROUTE_IMMEDIATE',
+      description: 'Isolate prompt security checks, adversarial scanning, and credential redacting directly to Sentinel fleet.'
+    },
+    {
+      id: 'rule-p1-critical',
+      name: 'P1 Critical Priority Escalation',
+      enabled: true,
+      priority: 2,
+      conditionType: 'priority_level',
+      conditionValue: 'P1',
+      targetFleetId: 'fleet-alpha-core',
+      targetAgentId: 'hermes-prime',
+      fallbackFleetId: 'fleet-alpha-core',
+      action: 'DELEGATE_SUPERVISED',
+      description: 'Route all P1 emergency tasks directly to Hermes Prime with quorum supervision across all nodes.'
+    },
+    {
+      id: 'rule-dev-code',
+      name: 'Code Synthesis & Pull Request Pipeline',
+      enabled: true,
+      priority: 3,
+      conditionType: 'topic_keyword',
+      conditionValue: 'code, git, pr, refactor, bugfix, compile, typescript, python, diff, unit test, build',
+      targetFleetId: 'fleet-dev-synth',
+      targetAgentId: 'code-synthesizer',
+      fallbackFleetId: 'fleet-alpha-core',
+      action: 'ROUTE_IMMEDIATE',
+      description: 'Direct code creation, diff verification, and unit test generation to the developer agent swarm.'
+    },
+    {
+      id: 'rule-arxiv-research',
+      name: 'Deep Literature & Arxiv Synthesis',
+      enabled: true,
+      priority: 4,
+      conditionType: 'topic_keyword',
+      conditionValue: 'research, arxiv, paper, citation, benchmark, literature, theory, math, survey',
+      targetFleetId: 'fleet-deep-oracle',
+      targetAgentId: 'research-oracle',
+      fallbackFleetId: 'fleet-alpha-core',
+      action: 'ROUTE_IMMEDIATE',
+      description: 'Send multi-source literature surveys, vector cross-referencing, and mathematical audits to Research Oracle.'
+    },
+    {
+      id: 'rule-data-sql',
+      name: 'SQL Query & Dataset Stream Processing',
+      enabled: true,
+      priority: 5,
+      conditionType: 'topic_keyword',
+      conditionValue: 'sql, postgres, clickhouse, schema, migration, parquet, dataset, etl, database',
+      targetFleetId: 'fleet-alpha-core',
+      targetAgentId: 'data-weaver',
+      fallbackFleetId: 'fleet-dev-synth',
+      action: 'ROUTE_IMMEDIATE',
+      description: 'Dispatch database schema migrations and synthetic dataset generation to DataWeaver worker.'
+    }
+  ],
+  handoffRules: [
+    {
+      id: 'handoff-conf-01',
+      name: 'Low Confidence Autonomous Escalation',
+      enabled: true,
+      triggerType: 'confidence_threshold',
+      triggerOperator: '<',
+      triggerThreshold: 0.72,
+      unitLabel: 'confidence score',
+      sourceFleetId: 'ALL_FLEETS',
+      targetFleetId: 'fleet-alpha-core',
+      contextPreservation: 'full_tokens',
+      humanApprovalRequired: false,
+      autoAckTimeoutSec: 8,
+      description: 'If agent confidence drops below 72%, trigger immediate handoff to Orchestrator Prime.'
+    },
+    {
+      id: 'handoff-ctx-02',
+      name: 'Context Saturation Checkpoint',
+      enabled: true,
+      triggerType: 'context_exhaustion',
+      triggerOperator: '>=',
+      triggerThreshold: 85,
+      unitLabel: '% of context window',
+      sourceFleetId: 'ALL_FLEETS',
+      targetFleetId: 'fleet-deep-oracle',
+      contextPreservation: 'summarized_kv',
+      humanApprovalRequired: false,
+      autoAckTimeoutSec: 10,
+      description: 'When context consumption hits 85%, handoff to Deep Oracle for recursive KV-cache compaction and state paging.'
+    },
+    {
+      id: 'handoff-retry-03',
+      name: 'Tool Failure Circuit Breaker',
+      enabled: true,
+      triggerType: 'error_retry_limit',
+      triggerOperator: '>=',
+      triggerThreshold: 3,
+      unitLabel: 'consecutive failures',
+      sourceFleetId: 'ALL_FLEETS',
+      targetFleetId: 'fleet-sec-sentinel',
+      contextPreservation: 'state_machine_only',
+      humanApprovalRequired: true,
+      autoAckTimeoutSec: 15,
+      description: 'Trip circuit breaker on 3 consecutive tool execution errors and handoff to Security Sentinel for quarantine.'
+    },
+    {
+      id: 'handoff-sla-04',
+      name: 'SLA Breach Warning Fast-Track',
+      enabled: true,
+      triggerType: 'sla_breach_warning',
+      triggerOperator: '<',
+      triggerThreshold: 180,
+      unitLabel: 'seconds until breach',
+      sourceFleetId: 'ALL_FLEETS',
+      targetFleetId: 'fleet-alpha-core',
+      contextPreservation: 'full_tokens',
+      humanApprovalRequired: false,
+      autoAckTimeoutSec: 5,
+      description: 'Fast-track critical tasks within 3 minutes of SLA expiry to Alpha Core high-priority queue.'
+    }
+  ]
+};
