@@ -103,6 +103,13 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{
+    status: 'success' | 'error';
+    message: string;
+    details?: string;
+    isMixedContent?: boolean;
+  } | null>(null);
 
   const handleCopyCommand = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -368,6 +375,51 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 animate-pulse"></span>
                   <span><strong>Port 8642</strong> is the standard Hermes Agent Gateway / API port (<code className="text-cyan-300">hermes gateway</code>). Port 9119 is reserved for the web UI dashboard.</span>
                 </div>
+
+                {/* Cloud HTTPS Preview / Mixed Content Warning Banner */}
+                {typeof window !== 'undefined' && window.location.protocol === 'https:' && portalSettings.connection.serverUrl.startsWith('http://') && (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-slate-300 space-y-2.5">
+                    <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Cloud HTTPS Preview Notice: Browser Blocks Insecure http://localhost</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      You are accessing this dashboard over <strong>HTTPS</strong>. Browsers strictly block secure HTTPS web pages from sending direct requests to <code className="text-amber-300 font-mono">http://localhost:8642</code> on your local workstation due to Mixed Content security policies.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <div className="p-2.5 rounded-lg bg-black/40 border border-white/[0.08] space-y-1.5">
+                        <span className="text-white font-semibold text-[10px] block">OPTION 1: EXPOSE VIA SECURE HTTPS TUNNEL (FASTEST)</span>
+                        <p className="text-[10px] text-slate-400">Run this in your terminal to create a free secure URL, then paste the <code className="text-cyan-300">https://...</code> link above:</p>
+                        <div className="flex items-center justify-between bg-[#05080f] px-2.5 py-1.5 rounded border border-white/[0.08] font-mono text-[10px] text-cyan-300">
+                          <span className="truncate">npx localtunnel --port 8642</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCommand('npx localtunnel --port 8642', 'localtunnel')}
+                            className="text-slate-400 hover:text-white cursor-pointer ml-2 shrink-0"
+                            title="Copy command"
+                          >
+                            {copiedCommand === 'localtunnel' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-black/40 border border-white/[0.08] space-y-1.5">
+                        <span className="text-white font-semibold text-[10px] block">OPTION 2: RUN MISSION CONTROL LOCALLY</span>
+                        <p className="text-[10px] text-slate-400">Run the dashboard locally on <code className="text-emerald-300 font-mono">http://localhost:3000</code> to eliminate all mixed content restrictions:</p>
+                        <div className="flex items-center justify-between bg-[#05080f] px-2.5 py-1.5 rounded border border-white/[0.08] font-mono text-[10px] text-emerald-300">
+                          <span className="truncate">npm run dev</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCommand('npm run dev', 'npm run dev')}
+                            className="text-slate-400 hover:text-white cursor-pointer ml-2 shrink-0"
+                            title="Copy command"
+                          >
+                            {copiedCommand === 'npm run dev' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* REAL DATA VS MOCK DATA CONTROL CENTER */}
@@ -418,16 +470,99 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
                     )}
 
                     <button
+                      disabled={isSyncing}
                       onClick={async () => {
-                        await syncWithRealHermesAgent();
+                        setIsSyncing(true);
+                        setSyncFeedback(null);
+                        const ok = await syncWithRealHermesAgent();
+                        const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+                        const isHttp = portalSettings.connection.serverUrl.startsWith('http://');
+                        if (ok) {
+                          setSyncFeedback({
+                            status: 'success',
+                            message: 'Successfully connected & synced with live Hermes Agent daemon! Zero mockup data.'
+                          });
+                        } else {
+                          setSyncFeedback({
+                            status: 'error',
+                            message: `Failed to reach Hermes daemon at ${portalSettings.connection.serverUrl}`,
+                            details: isHttps && isHttp
+                              ? 'Browser Mixed Content Restriction: Because you are viewing this on an HTTPS cloud preview, your browser blocks direct network calls to http://localhost:8642 on your machine.'
+                              : 'Verify that "hermes gateway --port 8642 --host 0.0.0.0" is running in your terminal.',
+                            isMixedContent: isHttps && isHttp
+                          });
+                        }
+                        setIsSyncing(false);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/40 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      className="px-3 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/40 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Sync Real Agent</span>
+                      {isSyncing ? (
+                        <div className="w-3.5 h-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSyncing ? 'Connecting...' : 'Sync Real Agent'}</span>
                     </button>
                   </div>
                 </div>
+
+                {/* Inline Sync Diagnostic / Action Card */}
+                {syncFeedback && (
+                  <div className={`mt-3 p-3.5 rounded-xl border text-xs animate-fade-in ${
+                    syncFeedback.status === 'success'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      : 'bg-red-500/10 border-red-500/30 text-slate-200'
+                  }`}>
+                    {syncFeedback.status === 'success' ? (
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="font-semibold">{syncFeedback.message}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-amber-300 block">{syncFeedback.message}</span>
+                            {syncFeedback.details && (
+                              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                                {syncFeedback.details}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Direct Resolution Actions */}
+                        <div className="pt-2 border-t border-white/[0.08] flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              syncWithRealHermesAgent(true);
+                              setSyncFeedback({
+                                status: 'success',
+                                message: 'Real Agent Mode activated! Mockup data purged.'
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(76,215,246,0.3)] cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Switch to Real Mode Anyway (Purge All Mockups)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCommand('npx localtunnel --port 8642', 'localtunnel')}
+                            className="px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.12] text-slate-200 text-xs flex items-center gap-1.5 cursor-pointer font-mono"
+                            title="Expose port 8642 with HTTPS tunnel"
+                          >
+                            <Copy className="w-3 h-3 text-cyan-400" />
+                            <span>Copy Tunnel: npx localtunnel --port 8642</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Step-by-Step Connection Guide Accordion */}
                 <div className="mt-3 pt-3 border-t border-white/[0.06]">

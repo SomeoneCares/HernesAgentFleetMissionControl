@@ -131,19 +131,54 @@ To eliminate all simulated demonstration agents, mockup personas, and dummy task
 
 ## 3. Troubleshooting & FAQ
 
-### Issue: "Unable to reach Hermes Agent on http://localhost:8642"
-- **Cause 1**: The daemon is not running.
-  - *Fix*: Start the gateway using `hermes gateway --port 8642 --host 0.0.0.0`.
-- **Cause 2**: Browser Cross-Origin Resource Sharing (CORS) restriction.
-  - *Fix*: When running in a web browser, ensure the gateway allows CORS. Hermes Gateway supports CORS by default when launched with `--host 0.0.0.0`. If behind a reverse proxy (Nginx or Caddy), ensure `Access-Control-Allow-Origin: *` headers are forwarded.
-- **Cause 3**: Port conflict on 8642.
-  - *Fix*: Check if another process is using port 8642:
-    ```bash
-    # Linux / macOS
-    lsof -i :8642
-    # Windows
-    netstat -ano | findstr :8642
-    ```
+### Issue: "Failed to connect to http://localhost:8642" (Browser Mixed Content / CORS)
+
+#### Why this happens in Cloud Preview:
+If you are viewing Hermes Mission Control on the hosted Cloud Preview URL (`https://ais-dev-...run.app` or `https://ais-pre-...run.app`), your browser is on **HTTPS**. 
+Web browsers (Chrome, Edge, Firefox, Safari) enforce **Mixed Content & Private Network Access** security policies: they strictly block a secure `https://` web page from sending direct requests to an insecure `http://localhost` address on your local computer.
+
+#### How to fix this (Choose Option A or Option B):
+
+##### Option A: Expose port 8642 via a free HTTPS tunnel (Recommended for Cloud Preview)
+In your terminal, run either:
+```bash
+# Using localtunnel (no sign up required)
+npx localtunnel --port 8642
+```
+Or using ngrok:
+```bash
+ngrok http 8642
+```
+Copy the generated `https://` address (e.g. `https://cool-agent-42.loca.lt` or `https://xxxx.ngrok-free.app`), open **Settings (⚙️)** in Hermes Mission Control, and paste it into the **Daemon Endpoint** field.
+
+##### Option B: Run Hermes Mission Control locally on your computer
+When running the dashboard locally on `http://localhost:3000`, the app and the daemon are on the same local network, so browsers do not block the connection:
+```bash
+git clone <your-repo>
+cd hermes-mission-control
+npm install
+npm run dev
+```
+Open `http://localhost:3000` in your browser. Now `http://localhost:8642` will connect directly without any security warnings!
+
+##### Option C: Allow Insecure Content in Chrome / Edge Settings
+If you want to keep using the Cloud Preview with `http://localhost:8642`:
+1. Click the **View site information** / padlock icon on the left side of the browser address bar.
+2. Click **Site settings**.
+3. Scroll to **Insecure content** and change it from *Block (default)* to **Allow**.
+4. Refresh the page and click **"Sync Real Agent"** again.
+
+---
+
+### Other Potential Issues:
+- **Daemon not started**: Ensure `hermes gateway --port 8642 --host 0.0.0.0` is currently running in an active terminal.
+- **Port conflict on 8642**:
+  ```bash
+  # Linux / macOS
+  lsof -i :8642
+  # Windows
+  netstat -ano | findstr :8642
+  ```
 
 ### How to Restore Mockup Demo Data
 If you ever want to preview demo mode again:

@@ -1,7 +1,12 @@
 import React from 'react';
 import { useCluster } from '../context/ClusterContext';
+import { Settings } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onOpenSettings?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onOpenSettings }) => {
   const { portalSettings } = useCluster();
   const disclaimer = portalSettings?.branding?.footerDisclaimer || 'HERMES PROTOCOL // AUTONOMOUS AGENT ORCHESTRATION';
   const region = portalSettings?.connection?.clusterRegion || 'US-EAST-CORE-01';
@@ -13,6 +18,19 @@ export const Footer: React.FC = () => {
           <span>© {new Date().getFullYear()} {disclaimer}</span>
           <span className="hidden md:inline text-slate-600">|</span>
           <span className="hidden md:inline text-slate-400">CLUSTER REGION: {region}</span>
+          {onOpenSettings && (
+            <>
+              <span className="hidden md:inline text-slate-600">|</span>
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="hover:text-cyan-300 transition-colors flex items-center gap-1 text-slate-400 underline underline-offset-2 cursor-pointer"
+              >
+                <Settings className="w-3 h-3" />
+                <span>Cluster Settings (Alt+S)</span>
+              </button>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2 text-emerald-400">
           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#4edea3] animate-pulse"></span>

@@ -43,6 +43,44 @@ function AppContent() {
     }
   }, [portalSettings?.branding?.portalName, portalSettings?.branding?.portalTagline]);
 
+  // Route support for direct /settings and #settings URL navigation
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      if (
+        typeof window !== 'undefined' &&
+        (window.location.pathname.toLowerCase().includes('settings') ||
+          window.location.hash.toLowerCase().includes('settings'))
+      ) {
+        setSettingsTab('connection');
+        setIsSettingsOpen(true);
+      }
+    };
+
+    handleUrlRoute();
+    window.addEventListener('popstate', handleUrlRoute);
+    window.addEventListener('hashchange', handleUrlRoute);
+    return () => {
+      window.removeEventListener('popstate', handleUrlRoute);
+      window.removeEventListener('hashchange', handleUrlRoute);
+    };
+  }, []);
+
+  // Keyboard shortcut: Alt+S or Ctrl+, / Cmd+, to toggle Settings
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.key === ',' && (e.ctrlKey || e.metaKey)) ||
+        (e.key.toLowerCase() === 's' && e.altKey)
+      ) {
+        e.preventDefault();
+        setSettingsTab('connection');
+        setIsSettingsOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-cyan-500/20 selection:text-cyan-400 relative overflow-x-hidden transition-colors duration-200">
       {/* Cybernetic Ambient Mesh Background */}
@@ -78,7 +116,10 @@ function AppContent() {
       <CyberPet onOpenConfig={() => setIsPetModalOpen(true)} />
 
       {/* Aerospace Footer */}
-      <Footer />
+      <Footer onOpenSettings={() => {
+        setSettingsTab('connection');
+        setIsSettingsOpen(true);
+      }} />
 
       {/* Global Interactive CLI Terminal Drawer */}
       <CliModal

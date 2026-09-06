@@ -120,10 +120,15 @@ export async function testHermesConnection(
   } catch (err: any) {
     const latency = Math.round(performance.now() - startTime);
     let errMsg = err.message || 'Connection refused';
+    const isHttpsOrigin = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const isHttpTarget = base.startsWith('http://');
+
     if (err.name === 'AbortError') {
       errMsg = 'Connection timed out (no response from port 8642 within 4s)';
+    } else if (isHttpsOrigin && isHttpTarget) {
+      errMsg = `Browser Mixed Content Block: This cloud preview is running on HTTPS, which blocks direct http://localhost requests. Run "npx localtunnel --port 8642" or "ngrok http 8642" in your terminal and enter the https:// URL in Settings, or run this dashboard locally on http://localhost:3000.`;
     } else if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
-      errMsg = `Failed to connect to ${base}. Verify your Hermes agent daemon is running via "hermes gateway --port 8642". If running in a browser, ensure CORS allows requests or run the daemon with CORS enabled.`;
+      errMsg = `Failed to connect to ${base}. Verify your Hermes agent daemon is running via "hermes gateway --port 8642 --host 0.0.0.0". If running in a browser, ensure CORS allows requests.`;
     }
 
     return {

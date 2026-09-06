@@ -140,7 +140,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {branding.showOrgBadge && branding.organizationName && (
-            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.08]">
+            <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.08]">
               <Shield className="w-3 h-3 text-cyan-400" />
               <span className="font-mono text-[10px] font-medium tracking-wide text-slate-300 uppercase">
                 {branding.organizationName}
@@ -148,10 +148,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          <div className="h-4 w-px bg-white/10 hidden md:block" />
+          <div className="h-4 w-px bg-white/10 hidden 2xl:block" />
 
           {/* Minimalist Cluster Pulse */}
-          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.08]">
+          <div className="hidden 2xl:flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.08]">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#4edea3]"></span>
@@ -169,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Telemetry Status Pills & User Profile */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div className="hidden 2xl:flex items-center gap-2 font-mono text-xs">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08]">
               <span className="text-slate-400 text-[10px]">PING</span>
@@ -181,21 +181,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* 1. Self-Host & Deploy Button */}
+          {/* 1. Primary Settings Launcher - High-Visibility Accented Button */}
+          {onOpenSettings && (
+            <button
+              id="navbar-settings-launcher-btn"
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-cyan-100 border border-cyan-400/40 hover:border-cyan-400 shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all text-xs font-mono font-semibold cursor-pointer group shrink-0"
+              type="button"
+              title="Portal & Daemon Settings (Shortcut: Alt+S or Ctrl+,)"
+            >
+              <Settings className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-90 transition-transform duration-300" />
+              <span>Settings</span>
+            </button>
+          )}
+
+          {/* 2. CLI Terminal Button */}
           <button
-            onClick={onOpenSelfHost}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition-all text-xs font-mono group cursor-pointer shrink-0"
+            onClick={onOpenCli}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer shrink-0"
             type="button"
-            title="Zero-Server Self-Host & Deployment Guide"
+            title="Open Hermes CLI Terminal"
           >
-            <Server className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold hidden lg:inline">Self-Host</span>
-            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-300 font-bold tracking-wider hidden xl:inline">
-              0 SERVERS
-            </span>
+            <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">CLI</span>
           </button>
 
-          {/* 2. Visual Skins Switcher Button */}
+          {/* 3. Visual Skins Switcher Button */}
           <button
             onClick={onOpenSkins}
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/[0.08] hover:border-cyan-400/30 transition-all text-xs font-mono group cursor-pointer shrink-0"
@@ -203,7 +214,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title={`Customize Visual Skin: ${currentSkinMeta.name}`}
           >
             <Palette className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
-            <span className="hidden xl:inline font-medium">{currentSkinMeta.name.split(' ')[0]}</span>
+            <span className="hidden 2xl:inline font-medium">{currentSkinMeta.name.split(' ')[0]}</span>
             <div className="flex items-center -space-x-1 hidden sm:flex">
               {currentSkinMeta.swatches.slice(1, 3).map((c, i) => (
                 <span
@@ -215,18 +226,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </button>
 
-          {/* 3. CLI Terminal Button */}
+          {/* 4. Self-Host & Deploy Button */}
           <button
-            onClick={onOpenCli}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer shrink-0"
+            onClick={onOpenSelfHost}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition-all text-xs font-mono group cursor-pointer shrink-0"
             type="button"
-            title="Open Hermes CLI Terminal"
+            title="Zero-Server Self-Host & Deployment Guide"
           >
-            <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden md:inline">CLI</span>
+            <Server className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span className="font-semibold hidden lg:inline">Self-Host</span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-300 font-bold tracking-wider hidden 2xl:inline">
+              0 SERVERS
+            </span>
           </button>
 
-          {/* 4. Cyber Pet Assistant Launcher */}
+          {/* 5. Cyber Pet Assistant Launcher */}
           {onOpenPet && (
             <button
               onClick={onOpenPet}
@@ -236,20 +250,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
               <span className="hidden 2xl:inline font-medium">Pet</span>
-            </button>
-          )}
-
-          {/* 5. Portal & Cluster Settings Launcher */}
-          {onOpenSettings && (
-            <button
-              id="navbar-settings-launcher-btn"
-              onClick={onOpenSettings}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer group shrink-0"
-              type="button"
-              title="Portal & Cluster Settings (Server RPC, Storage, Swarm Defaults, Plugins, Snapshots)"
-            >
-              <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 group-hover:rotate-90 transition-transform duration-300" />
-              <span className="hidden xl:inline font-medium">Settings</span>
             </button>
           )}
 
@@ -364,10 +364,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-          {/* Quick Tab Legend on wide screens */}
-          <div className="hidden xl:flex items-center gap-2 text-[11px] font-mono text-slate-500 shrink-0">
-            <span>PORTAL:</span>
-            <span className="text-slate-300 uppercase">{activeTab} VIEW ACTIVE</span>
+          {/* Quick Access Settings & Tab Legend */}
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            {onOpenSettings && (
+              <button
+                onClick={onOpenSettings}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/15 border border-white/[0.1] hover:border-cyan-400/40 text-slate-300 hover:text-cyan-300 text-xs font-mono font-medium transition-all cursor-pointer shadow-sm"
+                title="Cluster & Connection Settings (Alt+S)"
+              >
+                <Settings className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Settings</span>
+                <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">(:8642)</span>
+              </button>
+            )}
+
+            <div className="hidden xl:flex items-center gap-2 text-[11px] font-mono text-slate-500 pl-2 border-l border-white/[0.08]">
+              <span>PORTAL:</span>
+              <span className="text-slate-300 uppercase">{activeTab} VIEW ACTIVE</span>
+            </div>
           </div>
         </div>
       </div>

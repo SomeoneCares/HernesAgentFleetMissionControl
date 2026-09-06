@@ -126,7 +126,7 @@ interface ClusterContextType {
   testConnectionPing: () => Promise<number>;
   purgeMockData: () => void;
   restoreMockData: () => void;
-  syncWithRealHermesAgent: () => Promise<boolean>;
+  syncWithRealHermesAgent: (force?: boolean) => Promise<boolean>;
   updateAgentSoul: (agentId: string, newSoul: string) => void;
   updateAgentMemories: (agentId: string, memories: AgentMemoryItem[]) => void;
   changeAgentModel: (agentId: string, newModelId: string) => void;
@@ -870,7 +870,53 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     showToast('Restored mockup demonstration cluster data');
   };
 
-  const syncWithRealHermesAgent = async (): Promise<boolean> => {
+  const syncWithRealHermesAgent = async (force = false): Promise<boolean> => {
+    if (force) {
+      const primaryModel = portalSettings.connection.connectedAgentModel || 'hermes-agent';
+      const liveAgent = createLiveHermesAgent(primaryModel, 12);
+
+      setAgents([liveAgent]);
+      setTasks([]);
+      setArtifacts([]);
+
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+      setEvents(prev => [
+        {
+          id: `evt-${Date.now()}`,
+          timestamp: timeStr,
+          agentName: 'Hermes Agent',
+          action: 'FORCE_REAL_MODE',
+          target: portalSettings.connection.serverUrl,
+          status: 'SUCCESS',
+          details: `Enforced Real Agent mode on ${portalSettings.connection.serverUrl}. All mock data purged.`
+        },
+        ...prev
+      ]);
+
+      setPortalSettings(prev => ({
+        ...prev,
+        connection: {
+          ...prev.connection,
+          connectionStatus: 'CONNECTED',
+          isLiveMode: true,
+          mockDataPurged: true,
+          connectedAgentModel: primaryModel
+        }
+      }));
+
+      try {
+        localStorage.setItem(MOCK_PURGED_KEY, 'true');
+        localStorage.removeItem(TASKS_STORAGE_KEY);
+        localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify([liveAgent]));
+      } catch (e) {
+        console.error('Failed to save live agent sync', e);
+      }
+
+      showToast('Real Hermes Agent mode activated with zero mockup data!');
+      return true;
+    }
+
     const res = await testHermesConnection(
       portalSettings.connection.serverUrl,
       portalSettings.connection.authToken
