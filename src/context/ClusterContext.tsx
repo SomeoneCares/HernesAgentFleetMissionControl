@@ -19,7 +19,7 @@ import {
   PortalBrandingSettings
 } from '../types';
 import { INITIAL_AGENTS, INITIAL_TASKS, INITIAL_ACTIVITY_EVENTS, AVAILABLE_MODELS, INITIAL_FLEETS, INITIAL_FLEET_ROUTING_CONFIG, INITIAL_ARTIFACTS } from '../data/mockData';
-import { testHermesConnection } from '../services/hermesAgentService';
+import { testHermesConnection, fetchHermesModels } from '../services/hermesAgentService';
 
 export const DEFAULT_PORTAL_SETTINGS: PortalSettings = {
   connection: {
@@ -97,6 +97,8 @@ interface ClusterContextType {
   activeTasks: TaskItem[];
   operatorProfile: UserProfile;
   toast: string | null;
+  availableModels: ModelOption[];
+  refreshHermesModels: () => Promise<string[]>;
   setActiveFleetId: (fleetId: string) => void;
   createFleet: (newFleet: Fleet) => void;
   moveTask: (taskId: string, targetColumn: 'todo' | 'inprogress' | 'done') => void;
@@ -261,28 +263,33 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   });
 
   // Helper to create live connected Hermes Agent instance
-  const createLiveHermesAgent = (modelName = 'hermes-agent', ping = 12): Agent => ({
+  const createLiveHermesAgent = (
+    modelName = 'hermes-agent',
+    ping = 12,
+    skills?: string[],
+    toolsets?: string[]
+  ): Agent => ({
     id: 'hermes-live-gateway',
     name: 'Hermes Agent',
     codename: 'Gateway-01 // Live',
-    role: 'Autonomous Gateway Core. Connected directly to localhost:8642 daemon with real model inference.',
+    role: `Autonomous Gateway Core. Connected directly to ${portalSettings.connection.serverUrl} daemon with real model inference.`,
     fleetId: 'fleet-alpha-core',
     status: 'ONLINE',
     statusColor: 'tertiary',
     avatarIcon: 'psychology',
     avatarPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
-    description: `Live Hermes Agent instance connected to daemon on port 8642. Zero mockup data.`,
+    description: `Live Hermes Agent instance connected to ${portalSettings.connection.serverUrl}. Zero mockup data.`,
     activeModelId: modelName,
     latencyLabel: `${ping}ms • LOCAL GATEWAY`,
     contextUsed: 1024,
     contextTotal: 128000,
     uptime: 'Live Session',
     slasHealth: '100% Verified Socket',
-    memoryArchitecture: ['Live Context', 'Tool Execution', 'Real Reasoning'],
+    memoryArchitecture: toolsets && toolsets.length > 0 ? toolsets : ['Live Context', 'Tool Execution', 'Real Reasoning'],
     assignedTasks: [],
-    tools: ['bash_sandbox', 'file_editor', 'web_search', 'python_eval'],
+    tools: skills && skills.length > 0 ? skills : ['bash_sandbox', 'file_editor', 'web_search', 'python_eval'],
     allocationPercent: 100,
-    soulPrompt: `Autonomous Hermes Agent running on port 8642. Zero mockup data.`
+    soulPrompt: `Autonomous Hermes Agent running on ${portalSettings.connection.serverUrl}. Zero mockup data.`
   });
 
   // Initialize agents from localStorage or mockData
@@ -523,22 +530,89 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     showToast(`Updated neural memory repository for ${agentId} (${memories.length} records)`);
   };
 
-  const changeAgentModel = (agentId: string, newModelId: string) => {
-    const modelObj = AVAILABLE_MODELS.find(m => m.id === newModelId);
-    if (!modelObj) return;
+  // Dynamic Model List: Combines live models reported by Hermes with spec metadata
+  const availableModels: ModelOption[] = useMemo(() => {
+    const isLive = Boolean(portalSettings.connection.isLiveMode || portalSettings.connection.mockDataPurged);
+    const liveIds = portalSettings.connection.availableModels || [];
+    const connectedPrimary = portalSettings.connection.connectedAgentModel;
 
+    // Collect all unique model IDs reported by Hermes daemon
+    const distinctLiveIds = new Set<string>();
+    if (connectedPrimary) distinctLiveIds.add(connectedPrimary);
+    liveIds.forEach(id => {
+      if (id && typeof id === 'string') distinctLiveIds.add(id.trim());
+    });
+    if (isLive && distinctLiveIds.size === 0) {
+      distinctLiveIds.add('hermes-agent');
+    }
+
+    const liveModelOptions: ModelOption[] = Array.from(distinctLiveIds).map(id => {
+      const existing = AVAILABLE_MODELS.find(m => m.id === id || m.name.toLowerCase().includes(id.toLowerCase()));
+      if (existing) {
+        return {
+          ...existing,
+          id,
+          name: `${existing.name} [Live Gateway]`,
+          tag: 'LIVE GATEWAY',
+          latencyMs: portalSettings.connection.lastHeartbeatPingMs || existing.latencyMs
+        };
+      }
+      return {
+        id,
+        name: id === 'hermes-agent' ? 'Hermes Agent (Live Gateway Core)' : `${id} (Live Gateway)`,
+        provider: 'Connected Hermes Gateway',
+        latencyMs: portalSettings.connection.lastHeartbeatPingMs || 8,
+        throughputTps: 85.0,
+        costPerM: 0.00,
+        contextWindow: '128k',
+        tag: 'LIVE GATEWAY'
+      };
+    });
+
+    if (isLive && portalSettings.connection.mockDataPurged) {
+      // User purged mockup demo data: Strictly display real live models from the connected daemon!
+      return liveModelOptions.length > 0 ? liveModelOptions : [
+        {
+          id: 'hermes-agent',
+          name: 'Hermes Agent (Live Gateway / Port 8642)',
+          provider: 'Connected Hermes Gateway',
+          latencyMs: 8,
+          throughputTps: 85.0,
+          costPerM: 0.00,
+          contextWindow: '128k',
+          tag: 'LIVE GATEWAY'
+        }
+      ];
+    }
+
+    // Hybrid/Demo mode: Live models first, then demo catalog models
+    const existingIds = new Set(liveModelOptions.map(m => m.id));
+    const nonDuplicatedDemo = AVAILABLE_MODELS.filter(m => !existingIds.has(m.id));
+    return [...liveModelOptions, ...nonDuplicatedDemo];
+  }, [
+    portalSettings.connection.isLiveMode,
+    portalSettings.connection.mockDataPurged,
+    portalSettings.connection.availableModels,
+    portalSettings.connection.connectedAgentModel,
+    portalSettings.connection.lastHeartbeatPingMs
+  ]);
+
+  const changeAgentModel = (agentId: string, newModelId: string) => {
+    const modelObj = availableModels.find(m => m.id === newModelId) || AVAILABLE_MODELS.find(m => m.id === newModelId);
+    
     setAgents(prev => prev.map(ag => {
       if (ag.id === agentId) {
         return {
           ...ag,
           activeModelId: newModelId,
-          latencyLabel: `${modelObj.latencyMs}ms • ${modelObj.tag}`
+          latencyLabel: modelObj ? `${modelObj.latencyMs}ms • ${modelObj.tag}` : '8ms • LOCAL GATEWAY'
         };
       }
       return ag;
     }));
 
-    showToast(`Updated ${agentId} to ${modelObj.name}`);
+    const modelName = modelObj ? modelObj.name : newModelId;
+    showToast(`Updated ${agentId} to ${modelName}`);
   };
 
   const autoBalanceFleet = () => {
@@ -870,6 +944,33 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     showToast('Restored mockup demonstration cluster data');
   };
 
+  const refreshHermesModels = async (): Promise<string[]> => {
+    try {
+      const models = await fetchHermesModels(
+        portalSettings.connection.serverUrl,
+        portalSettings.connection.authToken
+      );
+      if (models.length > 0) {
+        setPortalSettings(prev => ({
+          ...prev,
+          connection: {
+            ...prev.connection,
+            availableModels: models,
+            connectedAgentModel: models[0]
+          }
+        }));
+        showToast(`Discovered ${models.length} model(s) from Hermes Gateway`);
+        return models;
+      } else {
+        showToast(`No models returned from ${portalSettings.connection.serverUrl}/v1/models`);
+        return [];
+      }
+    } catch {
+      showToast(`Failed to query models from ${portalSettings.connection.serverUrl}`);
+      return [];
+    }
+  };
+
   const syncWithRealHermesAgent = async (force = false): Promise<boolean> => {
     if (force) {
       const primaryModel = portalSettings.connection.connectedAgentModel || 'hermes-agent';
@@ -901,7 +1002,12 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
           connectionStatus: 'CONNECTED',
           isLiveMode: true,
           mockDataPurged: true,
-          connectedAgentModel: primaryModel
+          connectedAgentModel: primaryModel,
+          availableModels: prev.connection.availableModels && prev.connection.availableModels.length > 0
+            ? prev.connection.availableModels
+            : [primaryModel],
+          lastSyncTimestamp: new Date().toISOString(),
+          lastSyncError: undefined
         }
       }));
 
@@ -924,7 +1030,7 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     if (res.ok) {
       const primaryModel = res.models?.[0] || 'hermes-agent';
-      const liveAgent = createLiveHermesAgent(primaryModel, res.latencyMs);
+      const liveAgent = createLiveHermesAgent(primaryModel, res.latencyMs, res.skills, res.toolsets);
 
       setAgents([liveAgent]);
       setTasks([]);
@@ -940,7 +1046,7 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
           action: 'LIVE_SYNC',
           target: portalSettings.connection.serverUrl,
           status: 'SUCCESS',
-          details: `Connected to live daemon (${portalSettings.connection.serverUrl}). Model: ${primaryModel} (${res.latencyMs}ms).`
+          details: `Connected to live daemon (${portalSettings.connection.serverUrl}). Model: ${primaryModel} (${res.latencyMs}ms). Discovered ${res.models.length} model(s).`
         },
         ...prev
       ]);
@@ -953,7 +1059,13 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
           lastHeartbeatPingMs: res.latencyMs,
           isLiveMode: true,
           mockDataPurged: true,
-          connectedAgentModel: primaryModel
+          connectedAgentModel: primaryModel,
+          availableModels: res.models,
+          discoveredSkills: res.skills,
+          discoveredToolsets: res.toolsets,
+          gatewayVersion: res.version,
+          lastSyncTimestamp: new Date().toISOString(),
+          lastSyncError: undefined
         }
       }));
 
@@ -968,6 +1080,17 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
       showToast(`Connected & Synced with live Hermes Agent (${primaryModel})!`);
       return true;
     } else {
+      setPortalSettings(prev => ({
+        ...prev,
+        connection: {
+          ...prev.connection,
+          connectionStatus: 'DISCONNECTED',
+          lastSyncError: res.error,
+          availableModels: prev.connection.availableModels && prev.connection.availableModels.length > 0
+            ? prev.connection.availableModels
+            : ['hermes-agent']
+        }
+      }));
       showToast(`Sync notice: ${res.error || 'Hermes gateway unreachable on ' + portalSettings.connection.serverUrl}`);
       return false;
     }
@@ -1114,6 +1237,8 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
         activeTasks,
         operatorProfile,
         toast,
+        availableModels,
+        refreshHermesModels,
         setActiveFleetId,
         createFleet,
         setFleets,

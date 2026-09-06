@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Agent, ModelOption, AgentMemoryItem } from '../types';
-import { AVAILABLE_MODELS } from '../data/mockData';
 import { useCluster } from '../context/ClusterContext';
 import { DeployAgentModal } from './DeployAgentModal';
 import { AgentDetailModal } from './AgentDetailModal';
@@ -48,7 +47,12 @@ export const AgentsTab: React.FC = () => {
     autoBalanceFleet, 
     killAgentTask, 
     deployAgent,
-    showToast 
+    showToast,
+    availableModels,
+    refreshHermesModels,
+    portalSettings,
+    syncWithRealHermesAgent,
+    tasks
   } = useCluster();
 
   const [isDeployOpen, setIsDeployOpen] = useState(false);
@@ -62,6 +66,8 @@ export const AgentsTab: React.FC = () => {
   const [photoModalAgent, setPhotoModalAgent] = useState<Agent | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [isAutoBalancing, setIsAutoBalancing] = useState(false);
+  const [isRefreshingModels, setIsRefreshingModels] = useState(false);
+  const [isDirectSyncing, setIsDirectSyncing] = useState(false);
 
   // Filter agents by active fleet
   const displayAgents = activeFleetId === 'all' 
@@ -70,8 +76,17 @@ export const AgentsTab: React.FC = () => {
 
   // Change model for an agent
   const handleModelChange = (agentId: string, newModelId: string) => {
+    if (newModelId === '__custom__') {
+      const customId = window.prompt('Enter your live model ID running on Hermes daemon (e.g. nous-hermes-3-llama-3.1-8b):');
+      if (customId && customId.trim()) {
+        changeAgentModel(agentId, customId.trim());
+        setNotification(`Updated ${agentId} to custom model "${customId.trim()}"`);
+        setTimeout(() => setNotification(null), 4000);
+      }
+      return;
+    }
     changeAgentModel(agentId, newModelId);
-    const modelObj = AVAILABLE_MODELS.find(m => m.id === newModelId);
+    const modelObj = availableModels.find(m => m.id === newModelId);
     if (modelObj) {
       setNotification(`Updated ${agentId} to ${modelObj.name} (${modelObj.throughputTps} tps)`);
       setTimeout(() => setNotification(null), 4000);
@@ -201,23 +216,23 @@ export const AgentsTab: React.FC = () => {
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <span className="text-xs font-mono text-slate-400 uppercase tracking-wide">TASKS IN-PROGRESS</span>
             <div className="text-3xl font-extrabold text-cyan-300 mt-1 tracking-tight">
-              {agents.reduce((acc, a) => acc + (a.activeTask ? 1 : 0) + a.assignedTasks.length, 0)}
+              {tasks.filter(t => t.column === 'inprogress').length || agents.reduce((acc, a) => acc + (a.activeTask ? 1 : 0) + a.assignedTasks.length, 0)}
             </div>
-            <span className="text-xs font-mono text-slate-400 mt-1 block">High concurrency</span>
+            <span className="text-xs font-mono text-slate-400 mt-1 block">Live Concurrency</span>
           </div>
 
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-xs font-mono text-slate-400 uppercase tracking-wide">COMPLETED TODAY</span>
+            <span className="text-xs font-mono text-slate-400 uppercase tracking-wide">COMPLETED MISSIONS</span>
             <div className="text-3xl font-extrabold text-purple-300 mt-1 tracking-tight">
-              142
+              {tasks.filter(t => t.column === 'done').length}
             </div>
-            <span className="text-xs font-mono text-purple-300/80 mt-1 block">+18 in last hour</span>
+            <span className="text-xs font-mono text-purple-300/80 mt-1 block">Done tasks verified</span>
           </div>
 
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <span className="text-xs font-mono text-slate-400 uppercase tracking-wide">BUFFER QUEUE</span>
             <div className="text-3xl font-extrabold text-slate-300 mt-1 tracking-tight">
-              03
+              {tasks.filter(t => t.column === 'todo').length}
             </div>
             <span className="text-xs font-mono text-emerald-400 mt-1 block">Zero drop rate</span>
           </div>
@@ -364,7 +379,7 @@ export const AgentsTab: React.FC = () => {
       ) : (
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {displayAgents.map((agent) => {
-            const currentModel = AVAILABLE_MODELS.find(m => m.id === agent.activeModelId) || AVAILABLE_MODELS[0];
+            const currentModel = availableModels.find(m => m.id === agent.activeModelId) || availableModels[0];
             const contextPercent = Math.round((agent.contextUsed / agent.contextTotal) * 100);
             const agentFleet = fleets.find(f => f.id === (agent.fleetId || 'fleet-alpha-core'));
 
@@ -423,7 +438,7 @@ export const AgentsTab: React.FC = () => {
                   </div>
 
                   {/* Fleet Partition Tag & Fast Relocation Selector */}
-                  <div className="flex items-center justify-between gap-2 mb-4 px-2.5 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[11px] font-mono">
+                  <div className="flex items-center justify-between gap-2 mb-3 px-2.5 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[11px] font-mono">
                     <div className="flex items-center gap-1.5">
                       <Layers className="w-3 h-3 text-cyan-400 shrink-0" />
                       <span className="text-slate-400">Fleet:</span>
@@ -446,19 +461,80 @@ export const AgentsTab: React.FC = () => {
                     </select>
                   </div>
 
+                  {/* Real Gateway Connection & Sync Status Banner */}
+                  {(portalSettings.connection.mockDataPurged || portalSettings.connection.isLiveMode) && (
+                    <div className="mb-3.5">
+                      {portalSettings.connection.lastSyncError ? (
+                        <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] font-mono flex items-center justify-between gap-2 text-amber-300">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                            <span className="truncate">Socket probe: {portalSettings.connection.lastSyncError}</span>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isDirectSyncing}
+                            onClick={async () => {
+                              setIsDirectSyncing(true);
+                              await syncWithRealHermesAgent();
+                              setIsDirectSyncing(false);
+                            }}
+                            className="px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-bold shrink-0 hover:bg-amber-300 cursor-pointer"
+                          >
+                            {isDirectSyncing ? '...' : 'Retry'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono flex items-center justify-between gap-2 text-emerald-300">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                            </span>
+                            <span className="truncate">Socket: {portalSettings.connection.serverUrl} ({portalSettings.connection.lastHeartbeatPingMs || 8}ms)</span>
+                          </div>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-200 shrink-0 font-bold">
+                            LIVE SOCKET
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 {/* Role Description */}
                 <p className="text-xs text-slate-300 leading-relaxed mb-5 min-h-[36px]">
                   {agent.role}
                 </p>
 
-                {/* ACTIVE INFERENCE ENGINE (Interactive Model Switcher) */}
+                {/* ACTIVE INFERENCE ENGINE (Interactive Dynamic Model Switcher) */}
                 <div className="mb-5 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
                   <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1.5">
-                    <span className="flex items-center gap-1.5 text-cyan-400 font-semibold uppercase">
-                      <Cpu className="w-3.5 h-3.5" />
-                      Active Inference Engine
-                    </span>
-                    <span className="text-slate-400">{agent.latencyLabel}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-cyan-400 font-semibold uppercase">
+                        <Cpu className="w-3.5 h-3.5" />
+                        Active Inference Engine
+                      </span>
+                      {(portalSettings.connection.mockDataPurged || portalSettings.connection.isLiveMode) && (
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-400/15 text-emerald-300 text-[9px] font-bold border border-emerald-400/25">
+                          LIVE GATEWAY
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsRefreshingModels(true);
+                          await refreshHermesModels();
+                          setIsRefreshingModels(false);
+                        }}
+                        disabled={isRefreshingModels}
+                        className="text-slate-400 hover:text-cyan-300 transition-colors p-1 rounded hover:bg-white/[0.05] cursor-pointer"
+                        title="Re-query models from Hermes Gateway (/v1/models)"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isRefreshingModels ? 'animate-spin text-cyan-400' : ''}`} />
+                      </button>
+                      <span className="text-slate-400">{agent.latencyLabel}</span>
+                    </div>
                   </div>
 
                   <div className="relative">
@@ -467,11 +543,16 @@ export const AgentsTab: React.FC = () => {
                       onChange={(e) => handleModelChange(agent.id, e.target.value)}
                       className="w-full appearance-none px-3 py-2 pr-8 rounded-lg bg-[#141c2c] border border-white/[0.1] text-xs font-mono text-white font-medium focus:border-cyan-400 focus:outline-none cursor-pointer hover:border-white/[0.2] transition-colors"
                     >
-                      {AVAILABLE_MODELS.map(m => (
+                      {availableModels.map(m => (
                         <option key={m.id} value={m.id} className="bg-[#101622] text-white">
-                          {m.name} ({m.throughputTps} tps)
+                          {m.tag === 'LIVE GATEWAY' ? `● ` : ''}{m.name} {m.throughputTps ? `(${m.throughputTps} tps)` : ''}
                         </option>
                       ))}
+                      {(portalSettings.connection.mockDataPurged || portalSettings.connection.isLiveMode) && (
+                        <option value="__custom__" className="bg-[#101622] text-cyan-300 font-bold">
+                          + Enter Custom Model Tag...
+                        </option>
+                      )}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   </div>

@@ -5,8 +5,11 @@ export interface HermesConnectionResult {
   latencyMs: number;
   statusCode?: number;
   models: string[];
+  skills?: string[];
+  toolsets?: string[];
   version?: string;
   error?: string;
+  isMixedContent?: boolean;
 }
 
 export interface HermesChatMessage {
@@ -27,7 +30,7 @@ export function normalizeHermesUrl(rawUrl: string): string {
 
 /**
  * Tests live connection handshake with Hermes Agent API Gateway (port 8642).
- * Tries /health, /health/detailed, and /v1/models.
+ * Tries /health, /v1/models, /v1/skills, and /v1/toolsets.
  */
 export async function testHermesConnection(
   serverUrl: string,
@@ -35,6 +38,8 @@ export async function testHermesConnection(
 ): Promise<HermesConnectionResult> {
   const base = normalizeHermesUrl(serverUrl);
   const startTime = performance.now();
+  const isHttpsOrigin = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const isHttpTarget = base.startsWith('http://');
 
   const headers: Record<string, string> = {
     'Accept': 'application/json'
@@ -43,10 +48,14 @@ export async function testHermesConnection(
     headers['Authorization'] = `Bearer ${authToken.trim()}`;
   }
 
+  let version = 'Hermes Gateway';
+  let isConnected = false;
+  let statusCode = 200;
+
   // 1. Try /health first
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
     const res = await fetch(`${base}/health`, {
       method: 'GET',
@@ -55,36 +64,25 @@ export async function testHermesConnection(
     });
     clearTimeout(timeoutId);
 
-    const latency = Math.round(performance.now() - startTime);
-
     if (res.ok) {
-      let version = 'Hermes Gateway';
+      isConnected = true;
+      statusCode = res.status;
       try {
         const data = await res.json();
         if (data.version) version = data.version;
       } catch {
         // text ok
       }
-
-      // Also try to list models
-      const models = await fetchHermesModels(base, authToken);
-
-      return {
-        ok: true,
-        latencyMs: latency,
-        statusCode: res.status,
-        models: models.length > 0 ? models : ['hermes-agent'],
-        version
-      };
     }
   } catch (err: any) {
     // Continue to fallback check /v1/models
   }
 
   // 2. Try /v1/models (OpenAI compatibility endpoint)
+  let models: string[] = [];
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
     const res = await fetch(`${base}/v1/models`, {
       method: 'GET',
@@ -93,51 +91,63 @@ export async function testHermesConnection(
     });
     clearTimeout(timeoutId);
 
-    const latency = Math.round(performance.now() - startTime);
-
     if (res.ok) {
+      isConnected = true;
+      statusCode = res.status;
       const data = await res.json();
-      const models = Array.isArray(data?.data)
-        ? data.data.map((m: any) => m.id || m.name || String(m))
-        : ['hermes-agent'];
-
-      return {
-        ok: true,
-        latencyMs: latency,
-        statusCode: res.status,
-        models: models.length > 0 ? models : ['hermes-agent'],
-        version: 'OpenAI-Compatible Gateway'
-      };
-    } else {
-      return {
-        ok: false,
-        latencyMs: Math.round(performance.now() - startTime),
-        statusCode: res.status,
-        models: [],
-        error: `Server responded with HTTP ${res.status}: ${res.statusText}`
-      };
+      if (Array.isArray(data?.data)) {
+        models = data.data.map((m: any) => m.id || m.name || String(m));
+      }
     }
   } catch (err: any) {
-    const latency = Math.round(performance.now() - startTime);
-    let errMsg = err.message || 'Connection refused';
-    const isHttpsOrigin = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const isHttpTarget = base.startsWith('http://');
+    // Handled in final check
+  }
 
-    if (err.name === 'AbortError') {
-      errMsg = 'Connection timed out (no response from port 8642 within 4s)';
-    } else if (isHttpsOrigin && isHttpTarget) {
-      errMsg = `Browser Mixed Content Block: This cloud preview is running on HTTPS, which blocks direct http://localhost requests. Run "npx localtunnel --port 8642" or "ngrok http 8642" in your terminal and enter the https:// URL in Settings, or run this dashboard locally on http://localhost:3000.`;
-    } else if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
-      errMsg = `Failed to connect to ${base}. Verify your Hermes agent daemon is running via "hermes gateway --port 8642 --host 0.0.0.0". If running in a browser, ensure CORS allows requests.`;
-    }
+  // 3. Try to discover skills and toolsets if connected
+  let skills: string[] = [];
+  let toolsets: string[] = [];
+  if (isConnected) {
+    try {
+      skills = await fetchHermesSkills(base, authToken);
+    } catch {}
+    try {
+      toolsets = await fetchHermesToolsets(base, authToken);
+    } catch {}
+  }
 
+  const latency = Math.round(performance.now() - startTime);
+
+  if (isConnected) {
     return {
-      ok: false,
+      ok: true,
       latencyMs: latency,
-      models: [],
-      error: errMsg
+      statusCode,
+      models: models.length > 0 ? models : ['hermes-agent'],
+      skills: skills.length > 0 ? skills : undefined,
+      toolsets: toolsets.length > 0 ? toolsets : undefined,
+      version: version || 'OpenAI-Compatible Gateway'
     };
   }
+
+  // If failed, formulate helpful error diagnosis
+  let errMsg = 'Connection refused or host unreachable';
+  let isMixed = false;
+
+  if (isHttpsOrigin && isHttpTarget) {
+    isMixed = true;
+    errMsg = `Browser Mixed Content Block: This cloud preview runs on HTTPS, which strictly blocks direct HTTP requests to ${base}. Run "npx localtunnel --port 8642" in your terminal and enter the https:// URL in Settings, or run this app locally via "npm run dev".`;
+  } else {
+    errMsg = `Failed to connect to ${base}. Verify your Hermes daemon is active with "hermes gateway --port 8642 --host 0.0.0.0" and CORS origins are enabled.`;
+  }
+
+  return {
+    ok: false,
+    latencyMs: latency,
+    statusCode: 0,
+    models: [],
+    error: errMsg,
+    isMixedContent: isMixed
+  };
 }
 
 /**
@@ -168,6 +178,56 @@ export async function fetchHermesModels(serverUrl: string, authToken?: string): 
   } catch {
     // fallback
   }
+  return [];
+}
+
+/**
+ * Discovers skills from the Hermes Agent /v1/skills endpoint if supported.
+ */
+export async function fetchHermesSkills(serverUrl: string, authToken?: string): Promise<string[]> {
+  const base = normalizeHermesUrl(serverUrl);
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  if (authToken && authToken.trim()) {
+    headers['Authorization'] = `Bearer ${authToken.trim()}`;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`${base}/v1/skills`, { headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.skills)) return data.skills.map((s: any) => s.name || s.id || String(s));
+      if (Array.isArray(data?.data)) return data.data.map((s: any) => s.name || s.id || String(s));
+      if (Array.isArray(data)) return data.map((s: any) => s.name || s.id || String(s));
+    }
+  } catch {}
+  return [];
+}
+
+/**
+ * Discovers toolsets from the Hermes Agent /v1/toolsets endpoint if supported.
+ */
+export async function fetchHermesToolsets(serverUrl: string, authToken?: string): Promise<string[]> {
+  const base = normalizeHermesUrl(serverUrl);
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  if (authToken && authToken.trim()) {
+    headers['Authorization'] = `Bearer ${authToken.trim()}`;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`${base}/v1/toolsets`, { headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.toolsets)) return data.toolsets.map((t: any) => t.name || t.id || String(t));
+      if (Array.isArray(data?.data)) return data.data.map((t: any) => t.name || t.id || String(t));
+      if (Array.isArray(data)) return data.map((t: any) => t.name || t.id || String(t));
+    }
+  } catch {}
   return [];
 }
 

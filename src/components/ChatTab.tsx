@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ModelOption } from '../types';
-import { INITIAL_CHAT_MESSAGES, AVAILABLE_MODELS } from '../data/mockData';
+import { INITIAL_CHAT_MESSAGES } from '../data/mockData';
 import { useCluster } from '../context/ClusterContext';
 import { WebRtcModal } from './WebRtcModal';
 import { sendHermesChatCompletion } from '../services/hermesAgentService';
@@ -33,12 +33,58 @@ import {
   Video
 } from 'lucide-react';
 
+const CHAT_SESSIONS_STORAGE_KEY = 'hermes_chat_sessions_v2';
+const CHAT_DRAFTS_STORAGE_KEY = 'hermes_chat_drafts_v2';
+const CHAT_ACTIVE_THREAD_KEY = 'hermes_chat_active_thread_v2';
+
 export const ChatTab: React.FC = () => {
-  const { agents, activeFleet, portalSettings } = useCluster();
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  const { agents, activeFleet, portalSettings, availableModels } = useCluster();
+
+  // Active thread selection with persistence
+  const [activeThread, setActiveThread] = useState<string>(() => {
     try {
-      if (localStorage.getItem('hermes_mock_purged_v1') === 'true') {
-        return [
+      const saved = localStorage.getItem(CHAT_ACTIVE_THREAD_KEY);
+      if (saved) return saved;
+    } catch {}
+    return agents[0]?.id || 'hermes-live-gateway';
+  });
+
+  // Default initial welcome message generator
+  const getInitialWelcome = (threadId: string): ChatMessage[] => {
+    const targetAgent = agents.find(a => a.id === threadId) || agents[0];
+    const isLive = portalSettings.connection.mockDataPurged || threadId === 'hermes-live-gateway';
+    return [
+      {
+        id: `msg-welcome-${threadId}-${Date.now()}`,
+        sender: 'agent',
+        agentName: targetAgent?.name || 'Hermes Agent',
+        timestamp: new Date().toTimeString().slice(0, 5),
+        text: isLive
+          ? `Hermes Agent Gateway online (${portalSettings.connection.serverUrl || 'port 8642'}). Active session connected. Ready for autonomous task execution and reasoning prompts.`
+          : `${targetAgent?.name || 'Hermes Prime Orchestrator'} online. Ready for cluster coordination and reasoning prompts.`,
+        confidence: isLive ? '100% Real Gateway' : '99.8%'
+      }
+    ];
+  };
+
+  // Persistent multi-thread chat sessions
+  const [sessions, setSessions] = useState<Record<string, ChatMessage[]>>(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_SESSIONS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load chat sessions from localStorage', e);
+    }
+    const defaultThread = agents[0]?.id || 'hermes-live-gateway';
+    const isPurged = localStorage.getItem('hermes_mock_purged_v1') === 'true';
+    if (isPurged) {
+      return {
+        [defaultThread]: [
           {
             id: 'msg-live-welcome',
             sender: 'agent',
@@ -47,15 +93,38 @@ export const ChatTab: React.FC = () => {
             text: 'Hermes Agent Gateway online (port 8642). Mockup data is purged. Ready for autonomous task execution and reasoning prompts.',
             confidence: '100% Real Gateway'
           }
-        ];
+        ]
+      };
+    }
+    return {
+      [defaultThread]: INITIAL_CHAT_MESSAGES,
+      'hermes-prime': INITIAL_CHAT_MESSAGES
+    };
+  });
+
+  // Draft text inputs per thread
+  const [drafts, setDrafts] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_DRAFTS_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
+  });
+
+  const [inputText, setInputText] = useState<string>(() => {
+    try {
+      const savedDrafts = localStorage.getItem(CHAT_DRAFTS_STORAGE_KEY);
+      if (savedDrafts) {
+        const parsed = JSON.parse(savedDrafts);
+        const thread = localStorage.getItem(CHAT_ACTIVE_THREAD_KEY) || agents[0]?.id || 'hermes-live-gateway';
+        return parsed[thread] || '';
       }
     } catch {}
-    return INITIAL_CHAT_MESSAGES;
+    return '';
   });
-  const [inputText, setInputText] = useState('');
+
   const [isSending, setIsSending] = useState(false);
-  const [activeModel, setActiveModel] = useState(AVAILABLE_MODELS[0].id);
-  const [activeThread, setActiveThread] = useState(() => agents[0]?.id || 'hermes-live-gateway');
+  const [activeModel, setActiveModel] = useState(() => portalSettings.connection.connectedAgentModel || availableModels[0]?.id || 'hermes-agent');
   const [showRightDrawer, setShowRightDrawer] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -68,34 +137,99 @@ export const ChatTab: React.FC = () => {
   const [isHalted, setIsHalted] = useState(false);
   const [isWebRtcOpen, setIsWebRtcOpen] = useState(false);
 
-  // Keep activeThread in sync if agents list changes (e.g. purge or sync)
-  useEffect(() => {
-    if (agents.length > 0 && !agents.some(a => a.id === activeThread)) {
-      setActiveThread(agents[0].id);
-    }
-  }, [agents, activeThread]);
+  // Active thread's messages
+  const messages = sessions[activeThread] || getInitialWelcome(activeThread);
 
-  // Purge mock chat messages if mockDataPurged is active
+  const updateActiveThreadMessages = (updater: (prev: ChatMessage[]) => ChatMessage[]) => {
+    setSessions(prev => {
+      const currentList = prev[activeThread] || getInitialWelcome(activeThread);
+      const nextList = updater(currentList);
+      const updated = {
+        ...prev,
+        [activeThread]: nextList
+      };
+      try {
+        localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to persist chat sessions', e);
+      }
+      return updated;
+    });
+  };
+
+  const handleSelectThread = (threadId: string) => {
+    setActiveThread(threadId);
+    setInputText(drafts[threadId] || '');
+    try {
+      localStorage.setItem(CHAT_ACTIVE_THREAD_KEY, threadId);
+    } catch {}
+  };
+
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+    setDrafts(prev => {
+      const updated = { ...prev, [activeThread]: text };
+      try {
+        localStorage.setItem(CHAT_DRAFTS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Keep activeThread in sync only if completely invalid
+  useEffect(() => {
+    const threadHasMessages = Boolean(sessions[activeThread] && sessions[activeThread].length > 0);
+    const agentExists = agents.some(a => a.id === activeThread);
+    if (!threadHasMessages && !agentExists && agents.length > 0) {
+      const fallbackId = agents[0].id;
+      setActiveThread(fallbackId);
+      setInputText(drafts[fallbackId] || '');
+      try {
+        localStorage.setItem(CHAT_ACTIVE_THREAD_KEY, fallbackId);
+      } catch {}
+    }
+  }, [agents, activeThread, sessions]);
+
+  // Keep activeModel aligned with connected Hermes agent model
+  useEffect(() => {
+    if (portalSettings.connection.connectedAgentModel) {
+      setActiveModel(portalSettings.connection.connectedAgentModel);
+    }
+  }, [portalSettings.connection.connectedAgentModel]);
+
+  // Ensure sessions are safely persisted to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    } catch (e) {
+      console.error('Failed to sync chat sessions to storage', e);
+    }
+  }, [sessions]);
+
+  // Filter out mock-only messages if mockDataPurged is active, without wiping user's conversation
   useEffect(() => {
     if (portalSettings?.connection?.mockDataPurged) {
-      setMessages(prev => {
-        const hasMockMessage = prev.some(m => m.id === 'msg-1' || m.id === 'msg-2' || m.id === 'msg-3');
-        if (hasMockMessage) {
-          return [
-            {
-              id: 'msg-live-welcome',
-              sender: 'agent',
-              agentName: 'Hermes Agent',
-              timestamp: new Date().toTimeString().slice(0, 5),
-              text: `Hermes Agent Gateway online (${portalSettings.connection.serverUrl || 'port 8642'}). Mockup data is purged. Ready for autonomous task execution and reasoning prompts.`,
-              confidence: '100% Real Gateway'
-            }
-          ];
+      setSessions(prev => {
+        let changed = false;
+        const nextSessions: Record<string, ChatMessage[]> = { ...prev };
+        for (const threadId of Object.keys(nextSessions)) {
+          const list = nextSessions[threadId];
+          if (list && list.some(m => m.id === 'msg-1' || m.id === 'msg-2' || m.id === 'msg-3')) {
+            const userMessages = list.filter(m => m.id !== 'msg-1' && m.id !== 'msg-2' && m.id !== 'msg-3');
+            nextSessions[threadId] = userMessages.length > 0 ? userMessages : getInitialWelcome(threadId);
+            changed = true;
+          }
+        }
+        if (changed) {
+          try {
+            localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(nextSessions));
+          } catch {}
+          return nextSessions;
         }
         return prev;
       });
     }
-  }, [portalSettings?.connection?.mockDataPurged, portalSettings?.connection?.serverUrl, portalSettings?.connection?.connectedAgentModel]);
+  }, [portalSettings?.connection?.mockDataPurged]);
 
   const currentAgent = agents.find(a => a.id === activeThread) || agents[0];
 
@@ -153,19 +287,19 @@ export const ChatTab: React.FC = () => {
         }
       };
 
-      setMessages(prev => [...prev, voiceMessage]);
+      updateActiveThreadMessages(prev => [...prev, voiceMessage]);
 
       // Trigger automatic agent reply
       setTimeout(() => {
         const agentReply: ChatMessage = {
           id: `msg-${Date.now() + 1}`,
           sender: 'agent',
-          agentName: 'Hermes Prime Orchestrator',
+          agentName: currentAgent?.name || 'Hermes Agent',
           timestamp: new Date().toTimeString().slice(0, 5),
-          text: 'Voice memo received and transcribed with 99.9% confidence. Cluster latency is currently nominal at 14ms. Ready for next directive.',
+          text: 'Voice memo received and transcribed with 99.9% confidence. Cluster latency is currently nominal. Ready for next directive.',
           confidence: '99.9%'
         };
-        setMessages(prev => [...prev, agentReply]);
+        updateActiveThreadMessages(prev => [...prev, agentReply]);
       }, 1200);
 
     } else {
@@ -212,8 +346,8 @@ export const ChatTab: React.FC = () => {
       attachments: newAttachments.length > 0 ? newAttachments : undefined
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInputText('');
+    updateActiveThreadMessages(prev => [...prev, userMsg]);
+    handleInputChange('');
     setAttachedFiles([]);
     setClipboardItem(null);
 
@@ -251,7 +385,7 @@ export const ChatTab: React.FC = () => {
               callId: res.toolCalls[0]?.id || `#TLM-${Math.floor(10000 + Math.random() * 90000)}`
             } : undefined
           };
-          setMessages(prev => [...prev, agentReply]);
+          updateActiveThreadMessages(prev => [...prev, agentReply]);
         } else if (portalSettings.connection.mockDataPurged) {
           // If mockup data is purged, show explicit connection error rather than fake canned text
           const errorReply: ChatMessage = {
@@ -262,7 +396,7 @@ export const ChatTab: React.FC = () => {
             confidence: 'Error Diagnostic',
             text: `⚠️ **Could not connect to live Hermes Agent at ${serverUrl}/v1/chat/completions**\n\n*Error details:* \`${res.error || 'Connection refused or host unreachable'}\`\n\n**To connect your real agent:**\n1. Run: \`hermes gateway --port 8642 --host 0.0.0.0\` in your terminal\n2. Open Settings (⚙️ in top bar) and verify URL is \`http://localhost:8642\`\n3. Click **"Test Connection"** to verify the socket`
           };
-          setMessages(prev => [...prev, errorReply]);
+          updateActiveThreadMessages(prev => [...prev, errorReply]);
         } else {
           // Fallback simulation when in demo mockup mode
           const isStatusCmd = userMsg.text.includes('/status');
@@ -271,7 +405,7 @@ export const ChatTab: React.FC = () => {
           const agentReply: ChatMessage = {
             id: `msg-${Date.now() + 1}`,
             sender: 'agent',
-            agentName: 'Hermes Prime Orchestrator',
+            agentName: currentAgent?.name || 'Hermes Prime Orchestrator',
             timestamp: new Date().toTimeString().slice(0, 5),
             confidence: '99.8%',
             text: isStatusCmd 
@@ -287,7 +421,7 @@ export const ChatTab: React.FC = () => {
               callId: `#TLM-${Math.floor(10000 + Math.random() * 90000)}`
             }
           };
-          setMessages(prev => [...prev, agentReply]);
+          updateActiveThreadMessages(prev => [...prev, agentReply]);
         }
       } catch (err: any) {
         console.error('Chat dispatch error', err);
@@ -356,7 +490,7 @@ export const ChatTab: React.FC = () => {
             return (
               <button
                 key={ag.id}
-                onClick={() => setActiveThread(ag.id)}
+                onClick={() => handleSelectThread(ag.id)}
                 className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 cursor-pointer ${
                   isSelected
                     ? 'bg-cyan-400/10 border border-cyan-400/25'
@@ -461,9 +595,9 @@ export const ChatTab: React.FC = () => {
                 onChange={(e) => setActiveModel(e.target.value)}
                 className="bg-transparent text-slate-200 text-[11px] font-mono focus:outline-none cursor-pointer"
               >
-                {AVAILABLE_MODELS.map(m => (
+                {availableModels.map(m => (
                   <option key={m.id} value={m.id} className="bg-[#0e1320] text-white">
-                    {m.name}
+                    {m.tag === 'LIVE GATEWAY' ? `● ` : ''}{m.name}
                   </option>
                 ))}
               </select>
@@ -480,16 +614,19 @@ export const ChatTab: React.FC = () => {
               <span>WebRTC Call</span>
             </button>
 
-            {/* Clear Context Button */}
+            {/* New Session / Flush Context Button */}
             <button
               onClick={() => {
-                setMessages([INITIAL_CHAT_MESSAGES[0]]);
+                const freshWelcome = getInitialWelcome(activeThread);
+                updateActiveThreadMessages(() => freshWelcome);
+                handleInputChange('');
               }}
-              className="p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-slate-400 hover:text-white transition-colors"
-              title="Flush Conversation Context"
+              className="px-2.5 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 hover:text-white text-xs flex items-center gap-1.5 transition-colors border border-white/[0.08] cursor-pointer"
+              title="Start a fresh chat session for this agent"
               type="button"
             >
-              <Terminal className="w-4 h-4" />
+              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[11px] font-medium hidden sm:inline">New Session</span>
             </button>
 
             {/* Toggle Right Drawer */}
@@ -763,7 +900,7 @@ export const ChatTab: React.FC = () => {
               <input
                 type="text"
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
                 placeholder={isRecording ? `Recording voice transmission (${recordingSeconds}s)...` : "Type a message, run a slash command, or paste files/images..."}
                 disabled={isRecording}
                 className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-cyan-400/50 text-white placeholder:text-slate-500 text-xs focus:outline-none transition-colors"

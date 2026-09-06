@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Agent, ModelOption } from '../types';
-import { AVAILABLE_MODELS } from '../data/mockData';
 import { useCluster } from '../context/ClusterContext';
 import { X, Sparkles, Cpu, Shield, PlusCircle, Layers } from 'lucide-react';
 
@@ -11,13 +10,13 @@ interface DeployAgentModalProps {
 }
 
 export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onClose, onDeploy }) => {
-  const { fleets, activeFleetId } = useCluster();
+  const { fleets, activeFleetId, availableModels } = useCluster();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [selectedFleetId, setSelectedFleetId] = useState(
     activeFleetId === 'all' ? (fleets[0]?.id || 'fleet-alpha-core') : activeFleetId
   );
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState(availableModels[0]?.id || 'hermes-agent');
   const [contextSize, setContextSize] = useState('64k');
   const [memoryType, setMemoryType] = useState('Shared Vector RAG');
 
@@ -27,7 +26,7 @@ export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onCl
     e.preventDefault();
     if (!name.trim() || !role.trim()) return;
 
-    const modelObj = AVAILABLE_MODELS.find(m => m.id === selectedModel) || AVAILABLE_MODELS[0];
+    const modelObj = availableModels.find(m => m.id === selectedModel) || availableModels[0];
 
     const newAgent: Agent = {
       id: `agent-${Date.now()}`,
@@ -39,8 +38,8 @@ export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onCl
       statusColor: 'tertiary',
       avatarIcon: 'smart_toy',
       description: role.trim(),
-      activeModelId: modelObj.id,
-      latencyLabel: `${modelObj.latencyMs}ms • ${modelObj.tag}`,
+      activeModelId: modelObj ? modelObj.id : selectedModel,
+      latencyLabel: modelObj ? `${modelObj.latencyMs}ms • ${modelObj.tag}` : '10ms • LOCAL GATEWAY',
       contextUsed: 1024,
       contextTotal: contextSize === '128k' ? 128000 : 64000,
       uptime: 'Just deployed',
@@ -130,9 +129,9 @@ export const DeployAgentModal: React.FC<DeployAgentModalProps> = ({ isOpen, onCl
                 onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-[#141b2b] border border-white/[0.1] text-white focus:border-cyan-400 focus:outline-none text-xs"
               >
-                {AVAILABLE_MODELS.map(m => (
+                {availableModels.map(m => (
                   <option key={m.id} value={m.id}>
-                    {m.name}
+                    {m.tag === 'LIVE GATEWAY' ? `● [LIVE] ` : ''}{m.name}
                   </option>
                 ))}
               </select>

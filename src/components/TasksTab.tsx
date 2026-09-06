@@ -33,7 +33,9 @@ export const TasksTab: React.FC = () => {
     const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           t.hash.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           t.assignedAgent.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAgent = agentFilter === 'ALL' || t.agentTag.toLowerCase() === agentFilter.toLowerCase();
+    const matchesAgent = agentFilter === 'ALL' || 
+                          t.agentTag.toLowerCase() === agentFilter.toLowerCase() || 
+                          t.assignedAgent.toLowerCase().includes(agentFilter.toLowerCase());
     const matchesFleet = activeFleetId === 'all' || (t.fleetId || 'fleet-alpha-core') === activeFleetId;
     return matchesSearch && matchesAgent && matchesFleet;
   });
@@ -122,11 +124,10 @@ export const TasksTab: React.FC = () => {
             onChange={(e) => setAgentFilter(e.target.value)}
             className="px-3.5 py-2 rounded-xl bg-[#101622]/80 border border-white/[0.08] text-xs font-mono text-slate-300 focus:border-cyan-400 focus:outline-none cursor-pointer"
           >
-            <option value="ALL">All Agents</option>
-            <option value="Dev">Dev Workers</option>
-            <option value="Orchestrator">Orchestrator</option>
-            <option value="Scout">Scout</option>
-            <option value="OpsSentry">OpsSentry</option>
+            <option value="ALL">All Agents ({agents.length})</option>
+            {agents.map((a) => (
+              <option key={a.id} value={a.name}>{a.name} ({a.codename})</option>
+            ))}
           </select>
 
           {/* New Mission Button */}

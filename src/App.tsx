@@ -108,7 +108,9 @@ function AppContent() {
         {activeTab === 'overview' && <OverviewTab onNavigateTab={setActiveTab} />}
         {activeTab === 'agents' && <AgentsTab />}
         {activeTab === 'tasks' && <TasksTab />}
-        {activeTab === 'chat' && <ChatTab />}
+        <div className={activeTab === 'chat' ? 'block' : 'hidden'}>
+          <ChatTab />
+        </div>
         {activeTab === 'library' && <ContentLibraryTab />}
       </main>
 

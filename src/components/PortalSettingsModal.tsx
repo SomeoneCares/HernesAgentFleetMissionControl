@@ -514,9 +514,20 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
                       : 'bg-red-500/10 border-red-500/30 text-slate-200'
                   }`}>
                     {syncFeedback.status === 'success' ? (
-                      <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span className="font-semibold">{syncFeedback.message}</span>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="font-semibold">{syncFeedback.message}</span>
+                        </div>
+                        {portalSettings.connection.availableModels && portalSettings.connection.availableModels.length > 0 && (
+                          <div className="text-[11px] text-emerald-200/90 pl-6 space-y-0.5 font-mono">
+                            <div>• <span className="text-white font-semibold">Active Model:</span> {portalSettings.connection.connectedAgentModel || portalSettings.connection.availableModels[0]}</div>
+                            <div>• <span className="text-white font-semibold">Discovered Engines:</span> {portalSettings.connection.availableModels.join(', ')}</div>
+                            {portalSettings.connection.discoveredSkills && portalSettings.connection.discoveredSkills.length > 0 && (
+                              <div>• <span className="text-white font-semibold">Live Skills:</span> {portalSettings.connection.discoveredSkills.slice(0, 6).join(', ')}{portalSettings.connection.discoveredSkills.length > 6 ? ` (+${portalSettings.connection.discoveredSkills.length - 6} more)` : ''}</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-3">

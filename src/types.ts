@@ -334,6 +334,12 @@ export interface PortalConnectionSettings {
   isLiveMode?: boolean; // When true, mock data is disabled and app connects to real Hermes daemon
   mockDataPurged?: boolean; // Indicates user has wiped all mock placeholders
   connectedAgentModel?: string; // Model reported by real Hermes agent (e.g. hermes-agent)
+  availableModels?: string[]; // Live model IDs retrieved from /v1/models
+  discoveredSkills?: string[]; // Skills discovered from /v1/skills
+  discoveredToolsets?: string[]; // Toolsets discovered from /v1/toolsets
+  gatewayVersion?: string; // Hermes Gateway version from /health
+  lastSyncTimestamp?: string; // ISO string of last successful sync
+  lastSyncError?: string; // Last connection or sync error diagnostic
 }
 
 export interface PortalStorageSettings {

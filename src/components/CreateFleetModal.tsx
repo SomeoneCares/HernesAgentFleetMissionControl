@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Fleet } from '../types';
-import { AVAILABLE_MODELS } from '../data/mockData';
+import { useCluster } from '../context/ClusterContext';
 import { X, Server, Layers, Cpu, Shield, Sparkles, PlusCircle } from 'lucide-react';
 
 interface CreateFleetModalProps {
@@ -10,13 +10,14 @@ interface CreateFleetModalProps {
 }
 
 export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({ isOpen, onClose, onCreate }) => {
+  const { availableModels } = useCluster();
   const [name, setName] = useState('');
   const [codename, setCodename] = useState('');
   const [description, setDescription] = useState('');
   const [purpose, setPurpose] = useState<Fleet['purpose']>('Core Production');
   const [nodeCluster, setNodeCluster] = useState('node-01.us-east.h100 (80GB SXM5)');
   const [vramAllocated, setVramAllocated] = useState('32.0 / 80 GB');
-  const [defaultModelId, setDefaultModelId] = useState(AVAILABLE_MODELS[0].id);
+  const [defaultModelId, setDefaultModelId] = useState(availableModels[0]?.id || 'hermes-agent');
 
   if (!isOpen) return null;
 
@@ -177,9 +178,9 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({ isOpen, onCl
                 onChange={e => setDefaultModelId(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-slate-200 focus:outline-none focus:border-cyan-400/50 cursor-pointer"
               >
-                {AVAILABLE_MODELS.map(m => (
+                {availableModels.map(m => (
                   <option key={m.id} value={m.id}>
-                    {m.name} ({m.tag})
+                    {m.tag === 'LIVE GATEWAY' ? `● [LIVE] ` : ''}{m.name} ({m.tag})
                   </option>
                 ))}
               </select>
