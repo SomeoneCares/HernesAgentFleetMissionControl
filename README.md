@@ -10,9 +10,11 @@
 
 **A cybernetic command portal for orchestrating, monitoring, and debugging distributed autonomous AI agent fleets.**
 
-[Features](#-key-features) • [Screenshots](#-visual-walkthrough) • [Portal Branding](#-portal-branding--white-labeling) • [Plugin Ecosystem](#-plugin--extension-ecosystem) • [Quickstart](#-quickstart)
+[Features](#-key-features) • [Screenshots](#-visual-walkthrough) • [Real Agent Setup Guide](./HERMES_CONNECTION_GUIDE.md) • [Portal Branding](#-portal-branding--white-labeling) • [Plugin Ecosystem](#-plugin--extension-ecosystem) • [Quickstart](#-quickstart)
 
 </div>
+
+> **Real Agent Mode**: To connect directly to your local or remote Hermes Agent with zero mockup data, follow the **[Hermes Agent Connection Guide](./HERMES_CONNECTION_GUIDE.md)** (default port `8642`).
 
 ---
 

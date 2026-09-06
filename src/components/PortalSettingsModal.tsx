@@ -41,7 +41,11 @@ import {
   Orbit,
   Network,
   Zap,
-  Bot
+  Bot,
+  Trash2,
+  Copy,
+  Check,
+  BookOpen
 } from 'lucide-react';
 import { usePlugins } from '../context/PluginsContext';
 import { CustomPlugin } from '../types';
@@ -72,6 +76,9 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
     importClusterSnapshot,
     resetClusterToDefaults,
     testConnectionPing,
+    purgeMockData,
+    restoreMockData,
+    syncWithRealHermesAgent,
     showToast
   } = useCluster();
 
@@ -93,7 +100,16 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
   const [showToken, setShowToken] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
   const [pingResult, setPingResult] = useState<{ latency: number; timestamp: string } | null>(null);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const handleCopyCommand = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCommand(label);
+    showToast(`Copied to clipboard: ${label}`);
+    setTimeout(() => setCopiedCommand(null), 2500);
+  };
   const [importPreview, setImportPreview] = useState<{
     fleetsCount: number;
     agentsCount: number;
@@ -343,28 +359,158 @@ export const PortalSettingsModal: React.FC<PortalSettingsModalProps> = ({
                     type="text"
                     value={portalSettings.connection.serverUrl}
                     onChange={(e) => updateConnectionSettings({ serverUrl: e.target.value })}
-                    placeholder="http://localhost:8080 or https://hermes.internal:8443"
+                    placeholder="http://localhost:8642 or http://127.0.0.1:8642"
                     className="w-full bg-[#05080f] border border-white/[0.12] focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-white font-mono text-xs placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-400/50"
                   />
                 </div>
 
-                {/* Preset Fast Selectors */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-slate-500 text-[10px]">PRESETS:</span>
-                  {[
-                    { label: 'Local Daemon (8080)', url: 'http://localhost:8080' },
-                    { label: 'Local Dev (3000)', url: 'http://localhost:3000' },
-                    { label: 'Remote Kubernetes Cluster (8443)', url: 'https://cluster.hermes.internal:8443' },
-                    { label: 'Hermes Cloud Sovereign', url: 'https://api.hermes-agent.io/v1' }
-                  ].map(preset => (
+                <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-cyan-500/5 border border-cyan-500/15 rounded-lg px-3 py-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 animate-pulse"></span>
+                  <span><strong>Port 8642</strong> is the standard Hermes Agent Gateway / API port (<code className="text-cyan-300">hermes gateway</code>). Port 9119 is reserved for the web UI dashboard.</span>
+                </div>
+              </div>
+
+              {/* REAL DATA VS MOCK DATA CONTROL CENTER */}
+              <div className="p-4 rounded-xl border transition-all bg-gradient-to-b from-white/[0.03] to-transparent border-white/[0.08]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white text-xs tracking-wide">
+                        DATA SOURCE MODE
+                      </span>
+                      {portalSettings.connection.mockDataPurged ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          REAL AGENT ONLY (MOCK DATA PURGED)
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-semibold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                          DEMO MODE (MOCKUP DATA ACTIVE)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {portalSettings.connection.mockDataPurged
+                        ? `Cluster running with zero mockup personas or dummy tasks. Connected to live Hermes daemon at ${portalSettings.connection.serverUrl}.`
+                        : 'Currently displaying demo mockup agents and placeholder tasks. Click "Purge Mock Data" to connect strictly to your real Hermes Agent.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!portalSettings.connection.mockDataPurged ? (
+                      <button
+                        onClick={purgeMockData}
+                        className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 text-red-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Purge Mock Data</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={restoreMockData}
+                        className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-slate-300 text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Restore demonstration mockups if needed"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Restore Mockups</span>
+                      </button>
+                    )}
+
                     <button
-                      key={preset.label}
-                      onClick={() => updateConnectionSettings({ serverUrl: preset.url })}
-                      className="px-2 py-1 rounded-lg bg-white/[0.03] hover:bg-cyan-500/10 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-400/30 text-[10px] text-slate-400 transition-all cursor-pointer"
+                      onClick={async () => {
+                        await syncWithRealHermesAgent();
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/40 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                     >
-                      {preset.label}
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Sync Real Agent</span>
                     </button>
-                  ))}
+                  </div>
+                </div>
+
+                {/* Step-by-Step Connection Guide Accordion */}
+                <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => setIsGuideOpen(!isGuideOpen)}
+                    className="w-full flex items-center justify-between text-left text-xs font-medium text-cyan-400 hover:text-cyan-300 py-1 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Step-by-Step Guide: How to Run & Connect your Hermes Agent</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
+                      {isGuideOpen ? 'Hide Guide ▲' : 'Show Guide ▼'}
+                    </span>
+                  </button>
+
+                  {isGuideOpen && (
+                    <div className="mt-3 space-y-3 p-3 rounded-lg bg-black/40 border border-white/[0.06] text-xs text-slate-300 animate-fade-in">
+                      {/* Step 1 */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between font-semibold text-white text-[11px]">
+                          <span>1. INSTALL HERMES AGENT</span>
+                          <button
+                            onClick={() => handleCopyCommand('pip install hermes-agent', 'pip install')}
+                            className="text-cyan-400 hover:text-cyan-300 text-[10px] flex items-center gap-1 font-mono cursor-pointer"
+                          >
+                            {copiedCommand === 'pip install' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedCommand === 'pip install' ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+                        <div className="bg-[#05080f] px-3 py-1.5 rounded-lg border border-white/[0.08] font-mono text-[11px] text-cyan-300">
+                          pip install hermes-agent
+                        </div>
+                      </div>
+
+                      {/* Step 2 */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between font-semibold text-white text-[11px]">
+                          <span>2. CONFIGURE ENVIRONMENT & PORT (8642)</span>
+                          <button
+                            onClick={() => handleCopyCommand('export API_SERVER_ENABLED=true\nexport API_SERVER_PORT=8642\nexport API_SERVER_HOST=0.0.0.0', 'env config')}
+                            className="text-cyan-400 hover:text-cyan-300 text-[10px] flex items-center gap-1 font-mono cursor-pointer"
+                          >
+                            {copiedCommand === 'env config' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedCommand === 'env config' ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+                        <div className="bg-[#05080f] px-3 py-1.5 rounded-lg border border-white/[0.08] font-mono text-[11px] text-slate-300 space-y-0.5">
+                          <div>export API_SERVER_ENABLED=true</div>
+                          <div>export API_SERVER_PORT=8642</div>
+                          <div>export API_SERVER_HOST=0.0.0.0</div>
+                        </div>
+                        <p className="text-[10px] text-slate-500">You can also save these into your <code className="text-slate-400">~/.hermes/.env</code> file.</p>
+                      </div>
+
+                      {/* Step 3 */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between font-semibold text-white text-[11px]">
+                          <span>3. LAUNCH HERMES GATEWAY DAEMON</span>
+                          <button
+                            onClick={() => handleCopyCommand('hermes gateway --port 8642 --host 0.0.0.0', 'launch gateway')}
+                            className="text-cyan-400 hover:text-cyan-300 text-[10px] flex items-center gap-1 font-mono cursor-pointer"
+                          >
+                            {copiedCommand === 'launch gateway' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedCommand === 'launch gateway' ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+                        <div className="bg-[#05080f] px-3 py-1.5 rounded-lg border border-white/[0.08] font-mono text-[11px] text-emerald-300">
+                          hermes gateway --port 8642 --host 0.0.0.0
+                        </div>
+                        <p className="text-[10px] text-slate-500">This boots the OpenAI-compatible REST server on <code className="text-cyan-400">http://localhost:8642</code>.</p>
+                      </div>
+
+                      {/* Step 4 */}
+                      <div className="space-y-1">
+                        <span className="font-semibold text-white text-[11px] block">4. CONNECT & PURGE MOCKUPS</span>
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                          Enter <code className="text-cyan-300">http://localhost:8642</code> in the Server Endpoint field above, test the connection handshake, and click <strong>"Purge Mock Data"</strong>. The dashboard will purge all fake personas and bind directly to your running Hermes agent!
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -331,6 +331,9 @@ export interface PortalConnectionSettings {
   clusterRegion: string;
   heartbeatIntervalSec: number;
   lastHeartbeatPingMs: number;
+  isLiveMode?: boolean; // When true, mock data is disabled and app connects to real Hermes daemon
+  mockDataPurged?: boolean; // Indicates user has wiped all mock placeholders
+  connectedAgentModel?: string; // Model reported by real Hermes agent (e.g. hermes-agent)
 }
 
 export interface PortalStorageSettings {
