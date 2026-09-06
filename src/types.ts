@@ -118,6 +118,14 @@ export interface TaskItem {
   metaNote?: string;
 }
 
+export interface AgentActivityStep {
+  step: number;
+  label: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  timestamp?: string;
+  detail?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'agent';
@@ -125,12 +133,18 @@ export interface ChatMessage {
   timestamp: string;
   text: string;
   confidence?: string;
+  thought?: string;
+  reasoningSteps?: string[];
+  currentActivity?: string;
+  activitySteps?: AgentActivityStep[];
   toolExecution?: {
     toolName: string;
     status: string;
     execTime: string;
     payloadSize: string;
     callId: string;
+    inputArgs?: string;
+    outputResult?: string;
   };
   codeSnippet?: {
     fileName: string;

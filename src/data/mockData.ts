@@ -588,13 +588,29 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
     agentName: 'Hermes Prime Orchestrator',
     timestamp: '14:31',
     confidence: '99.8%',
+    currentActivity: 'Cluster telemetry audit complete',
+    thought: `1. Directive Analysis: Operator requested rapid cluster audit, GPU VRAM snapshot, and telemetry streamer snippet.
+2. Authorization: Session credential verified (Operator Clearance Level-5).
+3. Tool Execution: Dispatching cluster_telemetry_fetch(mode="deep_profiler") across SXM5 bus.
+4. Telemetry Evaluation:
+   - 8/8 H100 SXM5 nodes online at 58.4°C - 62.1°C (nominal).
+   - VRAM load: 582.4 GB / 640.0 GB (91.0%), zero thermal throttling.
+5. Synthesis: Assembled Python WebSockets telemetry listener snippet and generated thermography asset.`,
+    activitySteps: [
+      { step: 1, label: 'Parsed cluster audit directive and validated parameters', status: 'completed', timestamp: '14:30:15' },
+      { step: 2, label: 'Dispatched hardware telemetry probe across 8x H100 SXM5 nodes', status: 'completed', timestamp: '14:30:22', detail: 'cluster_telemetry_fetch(mode="deep_profiler")' },
+      { step: 3, label: 'Inspected thermal bus & VRAM allocations (582.4 GB / 640.0 GB)', status: 'completed', timestamp: '14:30:31' },
+      { step: 4, label: 'Synthesized Python asyncio WebSockets streamer and multi-modal report', status: 'completed', timestamp: '14:30:45' }
+    ],
     text: 'Acknowledged, Commander. Executed telemetry probes across **Node-Cluster-Alpha**. All 8x H100 SXM5 nodes are in healthy operation with no thermal divergence detected.\n\n• Total Allocated VRAM: `582.4 GB / 640.0 GB` (91.0%)\n• Inference Engine: `vLLM Speculative Engine v0.6.2`\n• Websocket Pulse Latency: `14ms tick delta`',
     toolExecution: {
       toolName: 'cluster_telemetry_fetch(mode="deep_profiler")',
       status: 'STATUS 200 OK',
       execTime: '42.18ms',
       payloadSize: '12.4 KB (COMPRESSED)',
-      callId: '#TLM-98042'
+      callId: '#TLM-98042',
+      inputArgs: '{"mode": "deep_profiler", "target_nodes": ["node-01", "node-02", "node-03", "node-04", "node-05", "node-06", "node-07", "node-08"], "include_thermals": true}',
+      outputResult: '{"nodes_online": 8, "vram_allocated_gb": 582.4, "vram_total_gb": 640.0, "avg_temp_c": 60.2, "pcie_bandwidth_gbps": 900.0, "throttling": false}'
     },
     codeSnippet: {
       fileName: 'telemetry_streamer.py',

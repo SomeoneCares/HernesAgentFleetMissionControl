@@ -239,7 +239,7 @@ export async function sendHermesChatCompletion(
   messages: HermesChatMessage[],
   model: string = 'hermes-agent',
   authToken?: string
-): Promise<{ ok: boolean; replyText?: string; error?: string; modelUsed?: string; toolCalls?: any[] }> {
+): Promise<{ ok: boolean; replyText?: string; thought?: string; error?: string; modelUsed?: string; toolCalls?: any[] }> {
   const base = normalizeHermesUrl(serverUrl);
   const endpoint = `${base}/v1/chat/completions`;
 
@@ -275,12 +275,23 @@ export async function sendHermesChatCompletion(
 
     const data = await res.json();
     const choice = data.choices?.[0];
-    const replyText = choice?.message?.content || choice?.text || '';
+    let rawContent = choice?.message?.content || choice?.text || '';
+    let thought = choice?.message?.reasoning_content || choice?.message?.thought || choice?.message?.reasoning || '';
     const toolCalls = choice?.message?.tool_calls;
+
+    // Parse <think>...</think> tags if present in model text
+    if (!thought && typeof rawContent === 'string' && rawContent.includes('<think>')) {
+      const thinkMatch = rawContent.match(/<think>([\s\S]*?)<\/think>/i);
+      if (thinkMatch) {
+        thought = thinkMatch[1].trim();
+        rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+      }
+    }
 
     return {
       ok: true,
-      replyText,
+      replyText: rawContent,
+      thought: thought ? String(thought).trim() : undefined,
       modelUsed: data.model || model,
       toolCalls
     };
