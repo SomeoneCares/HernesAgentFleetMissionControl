@@ -55,7 +55,7 @@ export const ChatTab: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [activeModel, setActiveModel] = useState(AVAILABLE_MODELS[0].id);
-  const [activeThread, setActiveThread] = useState('hermes-prime');
+  const [activeThread, setActiveThread] = useState(() => agents[0]?.id || 'hermes-live-gateway');
   const [showRightDrawer, setShowRightDrawer] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -67,6 +67,35 @@ export const ChatTab: React.FC = () => {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [isHalted, setIsHalted] = useState(false);
   const [isWebRtcOpen, setIsWebRtcOpen] = useState(false);
+
+  // Keep activeThread in sync if agents list changes (e.g. purge or sync)
+  useEffect(() => {
+    if (agents.length > 0 && !agents.some(a => a.id === activeThread)) {
+      setActiveThread(agents[0].id);
+    }
+  }, [agents, activeThread]);
+
+  // Purge mock chat messages if mockDataPurged is active
+  useEffect(() => {
+    if (portalSettings?.connection?.mockDataPurged) {
+      setMessages(prev => {
+        const hasMockMessage = prev.some(m => m.id === 'msg-1' || m.id === 'msg-2' || m.id === 'msg-3');
+        if (hasMockMessage) {
+          return [
+            {
+              id: 'msg-live-welcome',
+              sender: 'agent',
+              agentName: 'Hermes Agent',
+              timestamp: new Date().toTimeString().slice(0, 5),
+              text: `Hermes Agent Gateway online (${portalSettings.connection.serverUrl || 'port 8642'}). Mockup data is purged. Ready for autonomous task execution and reasoning prompts.`,
+              confidence: '100% Real Gateway'
+            }
+          ];
+        }
+        return prev;
+      });
+    }
+  }, [portalSettings?.connection?.mockDataPurged, portalSettings?.connection?.serverUrl, portalSettings?.connection?.connectedAgentModel]);
 
   const currentAgent = agents.find(a => a.id === activeThread) || agents[0];
 
@@ -312,7 +341,7 @@ export const ChatTab: React.FC = () => {
               All
             </button>
             <button className="px-2.5 py-1 rounded-md bg-white/[0.02] text-slate-400 hover:text-white">
-              Agents (14)
+              Agents ({agents.length})
             </button>
             <button className="px-2.5 py-1 rounded-md bg-white/[0.02] text-slate-400 hover:text-white">
               Ops Logs
@@ -320,87 +349,54 @@ export const ChatTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Channels List */}
+        {/* Dynamic Channels / Agents List */}
         <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03] p-2 space-y-1">
-          {/* Thread 1: Hermes Prime */}
-          <button
-            onClick={() => setActiveThread('hermes-prime')}
-            className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 cursor-pointer ${
-              activeThread === 'hermes-prime'
-                ? 'bg-cyan-400/10 border border-cyan-400/25'
-                : 'hover:bg-white/[0.03] border border-transparent'
-            }`}
-          >
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-cyan-400/15 border border-cyan-400/30 flex items-center justify-center text-cyan-400">
-                <span className="material-symbols-outlined text-xl">psychology</span>
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#07090e]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="font-bold text-xs text-white truncate">Hermes Prime</span>
-                <span className="text-[10px] text-slate-500">14:31</span>
-              </div>
-              <p className="text-[11px] text-slate-400 truncate">Executed telemetry probes across Node-Cluster...</p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-400/10 text-cyan-300">Orchestrator</span>
-                <span className="text-[9px] text-emerald-400">18ms</span>
-              </div>
-            </div>
-          </button>
-
-          {/* Thread 2: CodeSynthesizer */}
-          <button
-            onClick={() => setActiveThread('code-synthesizer')}
-            className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 cursor-pointer ${
-              activeThread === 'code-synthesizer'
-                ? 'bg-cyan-400/10 border border-cyan-400/25'
-                : 'hover:bg-white/[0.03] border border-transparent'
-            }`}
-          >
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-purple-400/15 border border-purple-400/30 flex items-center justify-center text-purple-300">
-                <span className="material-symbols-outlined text-xl">code_blocks</span>
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-400 ring-2 ring-[#07090e]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="font-bold text-xs text-white truncate">CodeSynthesizer</span>
-                <span className="text-[10px] text-slate-500">14:28</span>
-              </div>
-              <p className="text-[11px] text-slate-400 truncate">Pull request #409 generated and tested...</p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-400/10 text-purple-300">Developer</span>
-                <span className="text-[9px] text-cyan-300 font-bold px-1 rounded bg-cyan-400/10">1 unread</span>
-              </div>
-            </div>
-          </button>
-
-          {/* Thread 3: OpsSentry */}
-          <button
-            onClick={() => setActiveThread('ops-sentry')}
-            className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 cursor-pointer ${
-              activeThread === 'ops-sentry'
-                ? 'bg-cyan-400/10 border border-cyan-400/25'
-                : 'hover:bg-white/[0.03] border border-transparent'
-            }`}
-          >
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-                <span className="material-symbols-outlined text-xl">shield_with_heart</span>
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#07090e]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="font-bold text-xs text-white truncate">OpsSentry</span>
-                <span className="text-[10px] text-slate-500">14:15</span>
-              </div>
-              <p className="text-[11px] text-slate-400 truncate">VRAM garbage collection cycle complete.</p>
-            </div>
-          </button>
+          {agents.map((ag) => {
+            const isSelected = activeThread === ag.id;
+            return (
+              <button
+                key={ag.id}
+                onClick={() => setActiveThread(ag.id)}
+                className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 cursor-pointer ${
+                  isSelected
+                    ? 'bg-cyan-400/10 border border-cyan-400/25'
+                    : 'hover:bg-white/[0.03] border border-transparent'
+                }`}
+              >
+                <div className="relative">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                    isSelected
+                      ? 'bg-cyan-400/20 text-cyan-300 border border-cyan-400/40'
+                      : 'bg-white/[0.05] text-slate-300 border border-white/[0.08]'
+                  }`}>
+                    {ag.avatarPhoto ? (
+                      <img src={ag.avatarPhoto} alt={ag.name} className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <span className="material-symbols-outlined text-xl text-cyan-400">
+                        {ag.avatarIcon || 'smart_toy'}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#07090e] ${
+                    ag.status === 'ONLINE' ? 'bg-emerald-400' : ag.status === 'BUSY' ? 'bg-amber-400' : 'bg-slate-500'
+                  }`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-bold text-xs text-white truncate">{ag.name}</span>
+                    <span className="text-[10px] text-slate-500">{ag.latencyLabel?.split('•')[0] || '12ms'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">{ag.description || ag.role}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-400/10 text-cyan-300 truncate max-w-[120px]">
+                      {ag.role?.split('.')[0] || ag.codename}
+                    </span>
+                    <span className="text-[9px] text-emerald-400">{ag.status}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Bottom VOX Audio Bus Decibel Meter (from Mockup Image 5) */}
@@ -438,7 +434,7 @@ export const ChatTab: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-white text-xs">
-                  {portalSettings.connection.mockDataPurged ? 'Hermes Agent (Live)' : 'Hermes Prime Orchestrator'}
+                  {currentAgent?.name || (portalSettings.connection.mockDataPurged ? 'Hermes Agent (Live)' : 'Hermes Prime Orchestrator')}
                 </h3>
                 <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
                   portalSettings.connection.mockDataPurged
@@ -450,8 +446,8 @@ export const ChatTab: React.FC = () => {
               </div>
               <span className="text-[10px] text-slate-400">
                 {portalSettings.connection.mockDataPurged
-                  ? `${portalSettings.connection.serverUrl} // ${portalSettings.connection.connectedAgentModel || 'hermes-agent'}`
-                  : 'Node-Cluster-Alpha-Root // Low Latency (14ms)'}
+                  ? `${portalSettings.connection.serverUrl || 'http://localhost:8642'} // ${currentAgent?.activeModelId || portalSettings.connection.connectedAgentModel || 'hermes-agent'}`
+                  : (currentAgent?.description || 'Node-Cluster-Alpha-Root // Low Latency (14ms)')}
               </span>
             </div>
           </div>
