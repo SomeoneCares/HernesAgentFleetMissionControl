@@ -542,7 +542,14 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [operatorProfile, setOperatorProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem('hermes_operator_profile_v1');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_OPERATOR_PROFILE,
+          ...parsed,
+          photoUrl: parsed.photoUrl || DEFAULT_OPERATOR_PROFILE.photoUrl
+        };
+      }
     } catch (e) {
       console.error('Failed to load operator profile', e);
     }

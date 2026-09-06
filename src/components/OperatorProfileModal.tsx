@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useCluster } from '../context/ClusterContext';
+import { useCluster, DEFAULT_OPERATOR_PROFILE } from '../context/ClusterContext';
 import { AGENT_AVATAR_PRESETS } from '../data/mockData';
 import { 
   X, 
@@ -14,7 +14,8 @@ import {
   BadgeCheck,
   RotateCcw,
   Sparkles,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 
 interface OperatorProfileModalProps {
@@ -37,7 +38,13 @@ export const OperatorProfileModal: React.FC<OperatorProfileModalProps> = ({ isOp
 
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset previewError when photoUrl changes
+  useEffect(() => {
+    setPreviewError(false);
+  }, [formData.photoUrl]);
 
   // Sync state whenever modal opens or operatorProfile changes
   useEffect(() => {
@@ -157,17 +164,22 @@ export const OperatorProfileModal: React.FC<OperatorProfileModalProps> = ({ isOp
             {/* Photo Avatar Preview */}
             <div className="relative group shrink-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-cyan-400/50 shadow-[0_0_20px_rgba(76,215,246,0.2)] bg-slate-950 relative">
-                {formData.photoUrl ? (
+                {formData.photoUrl && !previewError ? (
                   <img
                     src={formData.photoUrl}
                     alt={formData.name}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
+                    onError={() => setPreviewError(true)}
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-cyan-950/40 text-cyan-400">
-                    <User className="w-8 h-8 opacity-70" />
-                    <span className="text-[9px] text-cyan-300 font-bold mt-1">NO PHOTO</span>
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-cyan-950 via-slate-900 to-indigo-950 text-cyan-300 font-mono">
+                    <span className="text-xl font-bold">
+                      {(formData.name || 'BA').trim().slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="text-[9px] text-cyan-400/70 font-semibold mt-0.5">
+                      {previewError ? 'LOAD FAILED' : 'NO PHOTO'}
+                    </span>
                   </div>
                 )}
                 {/* Upload Overlay on Hover */}
@@ -195,16 +207,30 @@ export const OperatorProfileModal: React.FC<OperatorProfileModalProps> = ({ isOp
                   <Camera className="w-3.5 h-3.5 text-cyan-400" />
                   Biometric Photo & Avatar
                 </span>
-                {formData.photoUrl && (
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={handleResetPhoto}
-                    className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, photoUrl: DEFAULT_OPERATOR_PROFILE.photoUrl }));
+                      setPreviewError(false);
+                    }}
+                    className="text-[10px] text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Restore standard cybernetic portrait"
                   >
-                    <Trash2 className="w-3 h-3" />
-                    <span>Remove Photo</span>
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Default Portrait</span>
                   </button>
-                )}
+                  {formData.photoUrl && (
+                    <button
+                      type="button"
+                      onClick={handleResetPhoto}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight">
                 Upload your portrait file, paste an image link, or choose from cyber presets below.

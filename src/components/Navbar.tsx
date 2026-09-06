@@ -3,6 +3,7 @@ import { TabType } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useCluster } from '../context/ClusterContext';
 import { FleetSelectorDropdown } from './FleetSelectorDropdown';
+import { OperatorAvatar } from './OperatorAvatar';
 import { 
   Terminal, 
   Bell, 
@@ -168,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Telemetry Status Pills & User Profile */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
           <div className="hidden 2xl:flex items-center gap-2 font-mono text-xs">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08]">
               <span className="text-slate-400 text-[10px]">PING</span>
@@ -183,13 +184,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* 1. Self-Host & Deploy Button */}
           <button
             onClick={onOpenSelfHost}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition-all text-xs font-mono group cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition-all text-xs font-mono group cursor-pointer shrink-0"
             type="button"
             title="Zero-Server Self-Host & Deployment Guide"
           >
             <Server className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold hidden sm:inline">Self-Host</span>
-            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-300 font-bold tracking-wider hidden md:inline">
+            <span className="font-semibold hidden lg:inline">Self-Host</span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-300 font-bold tracking-wider hidden xl:inline">
               0 SERVERS
             </span>
           </button>
@@ -197,13 +198,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* 2. Visual Skins Switcher Button */}
           <button
             onClick={onOpenSkins}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/[0.08] hover:border-cyan-400/30 transition-all text-xs font-mono group cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/[0.08] hover:border-cyan-400/30 transition-all text-xs font-mono group cursor-pointer shrink-0"
             type="button"
-            title="Customize Visual Skins"
+            title={`Customize Visual Skin: ${currentSkinMeta.name}`}
           >
             <Palette className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
-            <span className="hidden sm:inline font-medium">{currentSkinMeta.name.split(' ')[0]}</span>
-            <div className="flex items-center -space-x-1">
+            <span className="hidden xl:inline font-medium">{currentSkinMeta.name.split(' ')[0]}</span>
+            <div className="flex items-center -space-x-1 hidden sm:flex">
               {currentSkinMeta.swatches.slice(1, 3).map((c, i) => (
                 <span
                   key={i}
@@ -217,32 +218,33 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* 3. CLI Terminal Button */}
           <button
             onClick={onOpenCli}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer shrink-0"
             type="button"
             title="Open Hermes CLI Terminal"
           >
             <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">CLI</span>
+            <span className="hidden md:inline">CLI</span>
           </button>
 
           {/* 4. Cyber Pet Assistant Launcher */}
           {onOpenPet && (
             <button
               onClick={onOpenPet}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all text-xs font-mono cursor-pointer group"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all text-xs font-mono cursor-pointer group shrink-0"
               type="button"
               title="Configure Cyber Pet Companion"
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
-              <span className="hidden lg:inline font-medium">Pet</span>
+              <span className="hidden 2xl:inline font-medium">Pet</span>
             </button>
           )}
 
           {/* 5. Portal & Cluster Settings Launcher */}
           {onOpenSettings && (
             <button
+              id="navbar-settings-launcher-btn"
               onClick={onOpenSettings}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer group"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs font-mono cursor-pointer group shrink-0"
               type="button"
               title="Portal & Cluster Settings (Server RPC, Storage, Swarm Defaults, Plugins, Snapshots)"
             >
@@ -252,7 +254,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {/* Notification Button */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] transition-all cursor-pointer"
@@ -290,30 +292,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          <div className="h-5 w-px bg-white/10 hidden sm:block" />
+          <div className="h-5 w-px bg-white/10 hidden sm:block shrink-0" />
 
-          {/* User Profile (Clickable to edit operator profile & photo) */}
+          {/* High-Visibility Operator Profile Launcher (Never clipped, always prominent) */}
           <button
+            id="navbar-operator-profile-btn"
             onClick={onOpenProfile}
             type="button"
-            className="flex items-center gap-2.5 pl-1 group text-left cursor-pointer focus:outline-none"
-            title="Edit Operator Profile & Photo"
+            className="flex items-center gap-2 pl-1.5 pr-2.5 sm:pr-3 py-1 rounded-xl bg-gradient-to-r from-cyan-950/40 to-slate-900/60 hover:from-cyan-900/50 hover:to-slate-800/80 border border-cyan-500/30 hover:border-cyan-400/70 shadow-[0_0_15px_rgba(76,215,246,0.12)] transition-all cursor-pointer group shrink-0 focus:outline-none focus:ring-1 focus:ring-cyan-400/50"
+            title={`Operator Profile: ${operatorProfile.name} (${operatorProfile.callsign})`}
           >
-            <div className="flex flex-col text-right hidden md:flex">
-              <span className="text-xs font-semibold text-white tracking-tight leading-none group-hover:text-cyan-300 transition-colors">
-                {operatorProfile.callsign}
+            <OperatorAvatar
+              photoUrl={operatorProfile.photoUrl}
+              name={operatorProfile.name}
+              callsign={operatorProfile.callsign}
+              size="sm"
+              showStatus={true}
+              status="online"
+              ringColor="border-cyan-400/60"
+            />
+            <div className="flex flex-col text-left min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-white tracking-tight leading-none group-hover:text-cyan-300 transition-colors">
+                  {operatorProfile.callsign}
+                </span>
+                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 leading-tight hidden lg:inline">
+                  ACTIVE
+                </span>
+              </div>
+              <span className="font-mono text-[9px] text-slate-400 group-hover:text-cyan-400/90 tracking-wider mt-0.5 font-medium leading-none truncate max-w-[85px] sm:max-w-none">
+                {operatorProfile.name.split(' ')[0]} • {operatorProfile.authLevel.split(' ')[0]}
               </span>
-              <span className="font-mono text-[9px] text-emerald-400 tracking-wider mt-0.5 font-medium">
-                {operatorProfile.authLevel}
-              </span>
-            </div>
-            <div className="relative">
-              <img
-                alt={operatorProfile.name}
-                className="w-8 h-8 rounded-xl object-cover ring-1 ring-white/20 group-hover:ring-cyan-400/70 transition-all shadow-md"
-                src={operatorProfile.photoUrl || "https://lh3.googleusercontent.com/aida/AEtjO1U7CFA2eq11fTUZeYlVg8sdGaBUpUo8R8YW_po-HQqzWCwMbLkG_D6hx_LTIujJ5yDww68Lgn9IEP3JFK2BV5eBb4omBVUV8e5LWXjgHg0gQ-ES6Q0x6lJUIYe4CWAKDVnLiyYhwmm3yXGZG25AEhd_0GoJ1y3I9VXu69rhGqMBlgx73t6-wcLE6nWoGcZSAtlp9ug-4DSdJj_lx709t9I7CpMVj7Ma0Z7FkINXNA9dfCdDDVeiOfzd_pxM"}
-              />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#07090e]"></span>
             </div>
           </button>
         </div>
