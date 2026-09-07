@@ -11,7 +11,8 @@ export const INITIAL_FLEETS: Fleet[] = [
     nodeCluster: 'node-01.us-east.h100 (80GB SXM5)',
     vramAllocated: '68.4 / 80 GB',
     defaultModelId: 'hermes-3-405b-instruct',
-    color: '#00f2fe'
+    color: '#00f2fe',
+    isMockup: true
   },
   {
     id: 'fleet-dev-synth',
@@ -23,7 +24,8 @@ export const INITIAL_FLEETS: Fleet[] = [
     nodeCluster: 'node-02.us-east.h100 (80GB SXM5)',
     vramAllocated: '52.1 / 80 GB',
     defaultModelId: 'qwen-2-5-coder-32b',
-    color: '#10b981'
+    color: '#10b981',
+    isMockup: true
   },
   {
     id: 'fleet-deep-oracle',
@@ -35,7 +37,8 @@ export const INITIAL_FLEETS: Fleet[] = [
     nodeCluster: 'node-03.eu-west.l40s (48GB PCIe)',
     vramAllocated: '34.8 / 48 GB',
     defaultModelId: 'hermes-3-70b-fp8',
-    color: '#a855f7'
+    color: '#a855f7',
+    isMockup: true
   },
   {
     id: 'fleet-sec-sentinel',
@@ -47,7 +50,8 @@ export const INITIAL_FLEETS: Fleet[] = [
     nodeCluster: 'node-04.us-central.airgap (RTX 6000 Ada)',
     vramAllocated: '28.2 / 48 GB',
     defaultModelId: 'hermes-2-pro-8b-guard',
-    color: '#ef4444'
+    color: '#ef4444',
+    isMockup: true
   }
 ];
 

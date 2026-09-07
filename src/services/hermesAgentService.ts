@@ -302,3 +302,176 @@ export async function sendHermesChatCompletion(
     };
   }
 }
+
+export interface DiscoveredHermesProfile {
+  name: string;
+  codename?: string;
+  description?: string;
+  model?: string;
+  skills?: string[];
+  tools?: string[];
+  soulPrompt?: string;
+  fleetId?: string;
+  status?: string;
+  role?: string;
+}
+
+export interface DiscoveredHermesFleet {
+  id: string;
+  name: string;
+  codename: string;
+  description?: string;
+  purpose?: string;
+  model?: string;
+  profiles?: DiscoveredHermesProfile[];
+}
+
+export async function fetchHermesProfilesAndFleets(
+  serverUrl: string,
+  authToken?: string
+): Promise<{
+  ok: boolean;
+  profiles: DiscoveredHermesProfile[];
+  fleets: DiscoveredHermesFleet[];
+  rawResponse?: any;
+  error?: string;
+}> {
+  const base = serverUrl.replace(/\/+$/, '');
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+  if (authToken && authToken.trim()) {
+    headers['Authorization'] = `Bearer ${authToken.trim()}`;
+  }
+
+  const profiles: DiscoveredHermesProfile[] = [];
+  const fleets: DiscoveredHermesFleet[] = [];
+
+  const probeJson = async (path: string): Promise<any> => {
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(`${base}${path}`, {
+        headers,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  // Check possible profile endpoints
+  const profilePaths = [
+    '/v1/profiles',
+    '/profiles',
+    '/api/profiles',
+    '/v1/agents',
+    '/agents'
+  ];
+
+  for (const path of profilePaths) {
+    const data = await probeJson(path);
+    if (data) {
+      const list = Array.isArray(data) ? data : data.profiles || data.agents || data.data;
+      if (Array.isArray(list)) {
+        list.forEach((item: any) => {
+          if (typeof item === 'string') {
+            profiles.push({
+              name: item,
+              codename: `HERMES-${item.toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+              role: `Autonomous agent running profile ${item}`
+            });
+          } else if (item && typeof item === 'object') {
+            profiles.push({
+              name: item.name || item.id || item.profile || 'Unnamed Profile',
+              codename: item.codename || (item.name ? `HERMES-${String(item.name).toUpperCase().replace(/[^A-Z0-9]/g, '-')}` : undefined),
+              description: item.description || item.bio || item.prompt,
+              model: item.model || item.modelId || item.model_id,
+              skills: Array.isArray(item.skills) ? item.skills : undefined,
+              tools: Array.isArray(item.tools) ? item.tools : undefined,
+              soulPrompt: item.soul || item.soulPrompt || item.system_prompt || item.prompt,
+              role: item.role || item.description
+            });
+          }
+        });
+        if (profiles.length > 0) break;
+      }
+    }
+  }
+
+  // Check possible fleet endpoints
+  const fleetPaths = [
+    '/v1/fleets',
+    '/fleets',
+    '/api/fleets'
+  ];
+
+  for (const path of fleetPaths) {
+    const data = await probeJson(path);
+    if (data) {
+      const list = Array.isArray(data) ? data : data.fleets || data.data;
+      if (Array.isArray(list)) {
+        list.forEach((item: any) => {
+          if (typeof item === 'string') {
+            fleets.push({
+              id: `fleet-${item.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              name: item,
+              codename: `FLEET-${item.toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+              description: `Partitioned fleet discovered from Hermes daemon: ${item}`
+            });
+          } else if (item && typeof item === 'object') {
+            fleets.push({
+              id: item.id || `fleet-${(item.name || 'unnamed').toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              name: item.name || item.id || 'Discovered Fleet',
+              codename: item.codename || `FLEET-${(item.name || 'HERMES').toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+              description: item.description || 'Hermes multi-agent fleet',
+              purpose: item.purpose || 'Custom Swarm',
+              model: item.model || item.defaultModelId
+            });
+          }
+        });
+        if (fleets.length > 0) break;
+      }
+    }
+  }
+
+  // Also check /config or /status
+  if (profiles.length === 0 && fleets.length === 0) {
+    const configData = await probeJson('/config') || await probeJson('/status');
+    if (configData) {
+      if (configData.profiles && typeof configData.profiles === 'object') {
+        const pList = Array.isArray(configData.profiles) ? configData.profiles : Object.keys(configData.profiles).map(k => ({ name: k, ...configData.profiles[k] }));
+        pList.forEach((p: any) => {
+          profiles.push({
+            name: p.name || 'Profile',
+            codename: `HERMES-${(p.name || '').toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+            model: p.model,
+            soulPrompt: p.soul || p.system_prompt
+          });
+        });
+      }
+      if (configData.fleets && typeof configData.fleets === 'object') {
+        const fList = Array.isArray(configData.fleets) ? configData.fleets : Object.keys(configData.fleets).map(k => ({ name: k, ...configData.fleets[k] }));
+        fList.forEach((f: any) => {
+          fleets.push({
+            id: f.id || `fleet-${(f.name || 'unnamed').toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+            name: f.name || 'Fleet',
+            codename: f.codename || `FLEET-${(f.name || 'HERMES').toUpperCase().replace(/[^A-Z0-9]/g, '-')}`
+          });
+        });
+      }
+    }
+  }
+
+  return {
+    ok: profiles.length > 0 || fleets.length > 0,
+    profiles,
+    fleets
+  };
+}
+

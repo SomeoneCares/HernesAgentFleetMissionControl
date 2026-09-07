@@ -27,9 +27,11 @@ import {
   FileCode,
   Sparkles,
   Camera,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Trash2
 } from 'lucide-react';
 import { FleetRoutingModal } from './FleetRoutingModal';
+import { ConnectHermesProfileModal } from './ConnectHermesProfileModal';
 
 export const AgentsTab: React.FC = () => {
   const { 
@@ -40,6 +42,8 @@ export const AgentsTab: React.FC = () => {
     activeFleet,
     reassignAgentFleet,
     createFleet,
+    deleteFleet,
+    syncHermesProfilesAndFleets,
     setAgents, 
     updateAgentSoul, 
     updateAgentMemories, 
@@ -57,6 +61,7 @@ export const AgentsTab: React.FC = () => {
 
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isCreateFleetOpen, setIsCreateFleetOpen] = useState(false);
+  const [isConnectProfileOpen, setIsConnectProfileOpen] = useState(false);
   const [isRoutingModalOpen, setIsRoutingModalOpen] = useState(false);
   const [fleetsPaused, setFleetsPaused] = useState(false);
   const [activeModalAgent, setActiveModalAgent] = useState<Agent | null>(null);
@@ -285,7 +290,7 @@ export const AgentsTab: React.FC = () => {
       {/* FLEET SELECTION & HOST PARTITION CONTROL BAR */}
       <div className="rounded-2xl bg-[#101622]/65 backdrop-blur-2xl border border-white/[0.08] p-6 shadow-xl flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Layers className="w-4 h-4 text-cyan-400" />
             <span className="font-mono text-xs uppercase tracking-wider text-slate-300 font-semibold">
               Host Server Fleet Partitions
@@ -293,16 +298,47 @@ export const AgentsTab: React.FC = () => {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 text-cyan-300 border border-cyan-400/30">
               Multi-Fleet Host
             </span>
+            {(portalSettings.connection.mockDataPurged || portalSettings.connection.isLiveMode) && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 font-bold">
+                LIVE DEMON CONNECTED
+              </span>
+            )}
           </div>
 
-          <button
-            onClick={() => setIsCreateFleetOpen(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 text-xs font-mono font-medium flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
-            type="button"
-          >
-            <PlusCircle className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Partition New Fleet</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            <button
+              onClick={() => setIsConnectProfileOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 text-cyan-200 border border-cyan-400/40 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-[0_0_12px_rgba(76,215,246,0.2)]"
+              type="button"
+            >
+              <Bot className="w-3.5 h-3.5 text-cyan-400" />
+              <span>+ Connect Hermes Profile</span>
+            </button>
+
+            <button
+              onClick={async () => {
+                setIsDirectSyncing(true);
+                await syncHermesProfilesAndFleets();
+                setIsDirectSyncing(false);
+              }}
+              disabled={isDirectSyncing}
+              className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border border-white/10 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              type="button"
+              title="Query /v1/profiles, /v1/fleets, /v1/models"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isDirectSyncing ? 'animate-spin' : ''}`} />
+              <span>{isDirectSyncing ? 'Syncing...' : 'Sync Daemon'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsCreateFleetOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+              type="button"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Partition New Fleet</span>
+            </button>
+          </div>
         </div>
 
         {/* Fleet Tabs Strip */}
@@ -321,44 +357,87 @@ export const AgentsTab: React.FC = () => {
             const fleetAgentCount = agents.filter(a => (a.fleetId || 'fleet-alpha-core') === fleet.id).length;
             const isSelected = activeFleetId === fleet.id;
             return (
-              <button
+              <div
                 key={fleet.id}
-                onClick={() => setActiveFleetId(fleet.id)}
-                className={`px-3.5 py-2 rounded-xl border transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl border transition-all shrink-0 flex items-center gap-2 group ${
                   isSelected
                     ? 'bg-cyan-400/20 text-cyan-200 border-cyan-400/50 shadow-[0_0_15px_rgba(76,215,246,0.3)] font-bold'
                     : 'bg-white/[0.02] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: fleet.color }} />
-                <span>{fleet.name}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
-                  {fleetAgentCount}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFleetId(fleet.id)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: fleet.color }} />
+                  <span>{fleet.name}</span>
+                  {fleet.isLiveHermesProfile && (
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-400/20 text-emerald-300 font-semibold border border-emerald-400/30">
+                      LIVE
+                    </span>
+                  )}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
+                    {fleetAgentCount}
+                  </span>
+                </button>
+
+                {fleets.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete fleet "${fleet.name}"?`)) {
+                        deleteFleet(fleet.id);
+                      }
+                    }}
+                    className="w-4 h-4 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer ml-1"
+                    title="Delete fleet partition"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
 
         {/* Active Fleet Details Spec Pill (if single fleet selected) */}
         {activeFleet && activeFleetId !== 'all' && (
-          <div className="pt-3 border-t border-white/[0.05] grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs font-mono text-slate-400">
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase block">Codename / Purpose</span>
-              <span className="text-white font-medium truncate block">{activeFleet.codename}</span>
+          <div className="pt-3 border-t border-white/[0.05] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono text-slate-400">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">Codename / Purpose</span>
+                <span className="text-white font-medium truncate block">{activeFleet.codename}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">Host Cluster Node</span>
+                <span className="text-cyan-300 font-medium truncate block">{activeFleet.nodeCluster}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">VRAM Headroom</span>
+                <span className="text-purple-300 font-medium truncate block">{activeFleet.vramAllocated}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">Default Engine</span>
+                <span className="text-emerald-300 font-medium truncate block">{activeFleet.defaultModelId}</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase block">Host Cluster Node</span>
-              <span className="text-cyan-300 font-medium truncate block">{activeFleet.nodeCluster}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase block">VRAM Headroom</span>
-              <span className="text-purple-300 font-medium truncate block">{activeFleet.vramAllocated}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase block">Default Engine</span>
-              <span className="text-emerald-300 font-medium truncate block">{activeFleet.defaultModelId}</span>
-            </div>
+
+            {fleets.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Delete fleet partition "${activeFleet.name}"?`)) {
+                    deleteFleet(activeFleet.id);
+                  }
+                }}
+                className="px-2.5 py-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 border border-transparent hover:border-red-500/20 text-[11px] flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Delete Fleet</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -750,10 +829,13 @@ export const AgentsTab: React.FC = () => {
       <CreateFleetModal
         isOpen={isCreateFleetOpen}
         onClose={() => setIsCreateFleetOpen(false)}
-        onCreateFleet={(newFleet) => {
-          createFleet(newFleet);
-          setIsCreateFleetOpen(false);
-        }}
+        onCreate={createFleet}
+      />
+
+      {/* Connect Real Hermes Profile & Fleet Modal */}
+      <ConnectHermesProfileModal
+        isOpen={isConnectProfileOpen}
+        onClose={() => setIsConnectProfileOpen(false)}
       />
 
       {/* Fleet Routing & Handoff Settings Modal */}

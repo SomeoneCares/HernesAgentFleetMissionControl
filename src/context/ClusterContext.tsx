@@ -19,7 +19,27 @@ import {
   PortalBrandingSettings
 } from '../types';
 import { INITIAL_AGENTS, INITIAL_TASKS, INITIAL_ACTIVITY_EVENTS, AVAILABLE_MODELS, INITIAL_FLEETS, INITIAL_FLEET_ROUTING_CONFIG, INITIAL_ARTIFACTS } from '../data/mockData';
-import { testHermesConnection, fetchHermesModels } from '../services/hermesAgentService';
+import { testHermesConnection, fetchHermesModels, fetchHermesProfilesAndFleets, DiscoveredHermesProfile, DiscoveredHermesFleet } from '../services/hermesAgentService';
+
+export const createLiveHermesFleet = (
+  name = 'Hermes Agent Swarm',
+  codename = 'FLEET-HERMES-LIVE',
+  modelId = 'hermes-agent',
+  purpose: Fleet['purpose'] = 'Core Production'
+): Fleet => ({
+  id: 'fleet-hermes-live',
+  name,
+  codename,
+  description: 'Connected directly to live Hermes agent daemon. Real execution runtime with zero mockups.',
+  purpose,
+  status: 'ACTIVE',
+  nodeCluster: 'local.hermes.daemon',
+  vramAllocated: 'Dynamic Host Allocation',
+  defaultModelId: modelId,
+  color: '#00f2fe',
+  isLiveHermesProfile: true,
+  isMockup: false
+});
 
 export const DEFAULT_PORTAL_SETTINGS: PortalSettings = {
   connection: {
@@ -101,6 +121,24 @@ interface ClusterContextType {
   refreshHermesModels: () => Promise<string[]>;
   setActiveFleetId: (fleetId: string) => void;
   createFleet: (newFleet: Fleet) => void;
+  deleteFleet: (fleetId: string) => void;
+  registerHermesProfileAndFleet: (params: {
+    name: string;
+    codename?: string;
+    description?: string;
+    modelId?: string;
+    role?: string;
+    soulPrompt?: string;
+    tools?: string[];
+    purpose?: Fleet['purpose'];
+    purgeMockups?: boolean;
+  }) => { newFleet: Fleet; newAgent: Agent };
+  syncHermesProfilesAndFleets: () => Promise<{
+    success: boolean;
+    discoveredProfilesCount: number;
+    discoveredFleetsCount: number;
+    message: string;
+  }>;
   moveTask: (taskId: string, targetColumn: 'todo' | 'inprogress' | 'done') => void;
   createTask: (newTask: TaskItem) => void;
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>;
@@ -188,8 +226,20 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Initialize fleets
   const [fleets, setFleets] = useState<Fleet[]>(() => {
     try {
+      const isMockPurged = localStorage.getItem(MOCK_PURGED_KEY) === 'true';
       const saved = localStorage.getItem(FLEETS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: Fleet[] = JSON.parse(saved);
+        if (isMockPurged) {
+          const liveOnly = parsed.filter(f => !f.isMockup && f.id !== 'fleet-alpha-core' && f.id !== 'fleet-dev-synth' && f.id !== 'fleet-deep-oracle' && f.id !== 'fleet-sec-sentinel');
+          if (liveOnly.length > 0) return liveOnly;
+          return [createLiveHermesFleet()];
+        }
+        return parsed;
+      }
+      if (isMockPurged) {
+        return [createLiveHermesFleet()];
+      }
     } catch (e) {
       console.error('Failed to load fleets from localStorage', e);
     }
@@ -204,7 +254,7 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     } catch (e) {
       console.error('Failed to load activeFleetId', e);
     }
-    return 'fleet-alpha-core';
+    return 'all';
   });
 
   const setActiveFleetId = (id: string) => {
@@ -267,13 +317,14 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     modelName = 'hermes-agent',
     ping = 12,
     skills?: string[],
-    toolsets?: string[]
+    toolsets?: string[],
+    customFleetId?: string
   ): Agent => ({
     id: 'hermes-live-gateway',
     name: 'Hermes Agent',
     codename: 'Gateway-01 // Live',
     role: `Autonomous Gateway Core. Connected directly to ${portalSettings.connection.serverUrl} daemon with real model inference.`,
-    fleetId: 'fleet-alpha-core',
+    fleetId: customFleetId || (fleets[0]?.id || 'fleet-hermes-live'),
     status: 'ONLINE',
     statusColor: 'tertiary',
     avatarIcon: 'psychology',
@@ -289,7 +340,9 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     assignedTasks: [],
     tools: skills && skills.length > 0 ? skills : ['bash_sandbox', 'file_editor', 'web_search', 'python_eval'],
     allocationPercent: 100,
-    soulPrompt: `Autonomous Hermes Agent running on ${portalSettings.connection.serverUrl}. Zero mockup data.`
+    soulPrompt: `Autonomous Hermes Agent running on ${portalSettings.connection.serverUrl}. Zero mockup data.`,
+    isLiveHermesProfile: true,
+    isMockup: false
   });
 
   // Initialize agents from localStorage or mockData
@@ -299,7 +352,8 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
         const saved = localStorage.getItem(AGENTS_STORAGE_KEY);
         if (saved) {
           const parsed: Agent[] = JSON.parse(saved);
-          if (parsed.length > 0) return parsed;
+          const liveOnly = parsed.filter(a => !a.isMockup && a.id !== 'hermes-prime' && a.id !== 'code-synthesizer' && a.id !== 'test-vanguard' && a.id !== 'research-oracle' && a.id !== 'citation-auditor' && a.id !== 'ops-sentry' && a.id !== 'data-weaver' && a.id !== 'security-sentinel');
+          if (liveOnly.length > 0) return liveOnly;
         }
         return [createLiveHermesAgent()];
       }
@@ -369,6 +423,42 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   const createFleet = (newFleet: Fleet) => {
     setFleets(prev => [...prev, newFleet]);
     setActiveFleetId(newFleet.id);
+
+    // If no agent belongs to this fleet yet, create an agent profile for this fleet so it appears in Chat and Agents list
+    setAgents(prev => {
+      const hasAgent = prev.some(a => a.fleetId === newFleet.id);
+      if (!hasAgent) {
+        const fleetAgent: Agent = {
+          id: `agent-${newFleet.id}`,
+          name: newFleet.name,
+          codename: `${newFleet.codename} // Fleet Core`,
+          role: `Autonomous Agent profile commanding fleet ${newFleet.name}.`,
+          fleetId: newFleet.id,
+          status: 'ONLINE',
+          statusColor: 'tertiary',
+          avatarIcon: 'psychology',
+          avatarPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
+          description: newFleet.description || `Autonomous agent profile for ${newFleet.name}.`,
+          activeModelId: newFleet.defaultModelId || portalSettings.connection.connectedAgentModel || 'hermes-agent',
+          latencyLabel: `${portalSettings.connection.lastHeartbeatPingMs || 12}ms • HERMES LIVE`,
+          contextUsed: 1024,
+          contextTotal: 128000,
+          uptime: 'Live',
+          slasHealth: '100% Operational',
+          memoryArchitecture: ['Session Directives', 'Hermes Toolsets'],
+          assignedTasks: [],
+          tools: ['bash_sandbox', 'file_editor', 'web_search'],
+          allocationPercent: 100,
+          soulPrompt: `You are the autonomous agent profile for fleet ${newFleet.name} (${newFleet.codename}).`,
+          isLiveHermesProfile: true,
+          profileName: newFleet.name,
+          isMockup: false
+        };
+        return [...prev, fleetAgent];
+      }
+      return prev;
+    });
+
     showToast(`Created & booted fleet [${newFleet.codename}] on host cluster.`);
     addActivityEvent({
       agent: 'Hermes Orchestrator',
@@ -377,6 +467,134 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
       status: 'PROVISIONED',
       statusType: 'success'
     });
+  };
+
+  const deleteFleet = (fleetId: string) => {
+    setFleets(prev => {
+      const remaining = prev.filter(f => f.id !== fleetId);
+      if (remaining.length === 0) {
+        return [createLiveHermesFleet()];
+      }
+      return remaining;
+    });
+
+    if (activeFleetId === fleetId) {
+      const remaining = fleets.filter(f => f.id !== fleetId);
+      setActiveFleetId(remaining[0]?.id || 'all');
+    }
+
+    showToast(`Removed fleet partition [${fleetId}]`);
+    addActivityEvent({
+      agent: 'Hermes Orchestrator',
+      category: 'GATEWAY',
+      text: `Removed fleet partition: ${fleetId}`,
+      status: 'DECOMMISSIONED',
+      statusType: 'warning'
+    });
+  };
+
+  const registerHermesProfileAndFleet = (params: {
+    name: string;
+    codename?: string;
+    description?: string;
+    modelId?: string;
+    role?: string;
+    soulPrompt?: string;
+    tools?: string[];
+    purpose?: Fleet['purpose'];
+    purgeMockups?: boolean;
+  }): { newFleet: Fleet; newAgent: Agent } => {
+    const rawName = params.name.trim();
+    const cleanSlug = rawName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'hermes-profile';
+    const fleetId = `fleet-${cleanSlug}-${Date.now().toString(36).slice(-4)}`;
+    const agentId = `agent-${cleanSlug}-${Date.now().toString(36).slice(-4)}`;
+    const codename = params.codename?.trim() || `FLEET-${cleanSlug.toUpperCase()}`;
+    const model = params.modelId || portalSettings.connection.connectedAgentModel || 'hermes-agent';
+
+    const newFleet: Fleet = {
+      id: fleetId,
+      name: rawName,
+      codename,
+      description: params.description || `Autonomous Hermes Agent Profile [${rawName}] connected on local daemon.`,
+      purpose: params.purpose || 'Core Production',
+      status: 'ACTIVE',
+      nodeCluster: 'local.hermes.daemon',
+      vramAllocated: 'Dynamic Profile VRAM',
+      defaultModelId: model,
+      color: '#00f2fe',
+      isLiveHermesProfile: true,
+      profileName: rawName,
+      serverUrl: portalSettings.connection.serverUrl,
+      isMockup: false
+    };
+
+    const newAgent: Agent = {
+      id: agentId,
+      name: rawName,
+      codename: `${codename} // Profile`,
+      role: params.role || `Autonomous Hermes Agent Profile (${rawName}) running model ${model}.`,
+      fleetId: newFleet.id,
+      status: 'ONLINE',
+      statusColor: 'tertiary',
+      avatarIcon: 'psychology',
+      avatarPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
+      description: params.description || `Live Hermes Agent Profile [${rawName}]. Zero mockup data.`,
+      activeModelId: model,
+      latencyLabel: `${portalSettings.connection.lastHeartbeatPingMs || 12}ms • HERMES LIVE`,
+      contextUsed: 1024,
+      contextTotal: 128000,
+      uptime: 'Active Session',
+      slasHealth: '100% Operational',
+      memoryArchitecture: ['Session Context', 'SOUL Directives', 'Hermes Tooling'],
+      assignedTasks: [],
+      tools: params.tools && params.tools.length > 0 ? params.tools : ['bash_sandbox', 'file_editor', 'web_search'],
+      allocationPercent: 100,
+      soulPrompt: params.soulPrompt || `You are ${rawName}, an autonomous AI agent running on Hermes Agent daemon.`,
+      isLiveHermesProfile: true,
+      profileName: rawName,
+      isMockup: false
+    };
+
+    const shouldPurge = params.purgeMockups ?? true;
+
+    if (shouldPurge) {
+      setFleets(prev => {
+        const liveOnly = prev.filter(f => !f.isMockup && f.id !== 'fleet-alpha-core' && f.id !== 'fleet-dev-synth' && f.id !== 'fleet-deep-oracle' && f.id !== 'fleet-sec-sentinel');
+        return [newFleet, ...liveOnly.filter(f => f.id !== newFleet.id)];
+      });
+      setAgents(prev => {
+        const liveOnly = prev.filter(a => !a.isMockup && !a.id.startsWith('agent-0') && a.id !== 'hermes-prime' && a.id !== 'code-synthesizer' && a.id !== 'test-vanguard' && a.id !== 'research-oracle' && a.id !== 'citation-auditor' && a.id !== 'ops-sentry' && a.id !== 'data-weaver' && a.id !== 'security-sentinel');
+        return [newAgent, ...liveOnly.filter(a => a.id !== newAgent.id)];
+      });
+      setPortalSettings(prev => ({
+        ...prev,
+        connection: {
+          ...prev.connection,
+          isLiveMode: true,
+          mockDataPurged: true,
+          connectionStatus: 'CONNECTED'
+        }
+      }));
+      try {
+        localStorage.setItem(MOCK_PURGED_KEY, 'true');
+      } catch {}
+    } else {
+      setFleets(prev => [...prev.filter(f => f.id !== newFleet.id), newFleet]);
+      setAgents(prev => [...prev.filter(a => a.id !== newAgent.id), newAgent]);
+    }
+
+    setActiveFleetId(newFleet.id);
+
+    showToast(`Registered Hermes Profile [${rawName}]! Active in Fleets and Chat.`);
+    addActivityEvent({
+      agent: rawName,
+      category: 'AGENT',
+      text: `Connected Hermes agent profile: ${rawName} [${codename}]`,
+      status: 'CONNECTED',
+      statusType: 'success'
+    });
+
+    return { newFleet, newAgent };
   };
 
   const showToast = (msg: string) => {
@@ -875,13 +1093,29 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const purgeMockData = () => {
-    // Replace mockup persona roster with single authentic live Hermes agent
+    // 1. Keep any custom live fleets or create a fresh live fleet
+    let updatedFleets: Fleet[] = [];
+    setFleets(prev => {
+      const liveOnly = prev.filter(f => !f.isMockup && f.id !== 'fleet-alpha-core' && f.id !== 'fleet-dev-synth' && f.id !== 'fleet-deep-oracle' && f.id !== 'fleet-sec-sentinel');
+      updatedFleets = liveOnly.length > 0 ? liveOnly : [createLiveHermesFleet()];
+      return updatedFleets;
+    });
+
+    // 2. Keep any live agent profiles or create a fresh live agent attached to the live fleet
     const liveModel = portalSettings.connection.connectedAgentModel || 'hermes-agent';
-    const liveAgent = createLiveHermesAgent(liveModel, portalSettings.connection.lastHeartbeatPingMs || 12);
+    const primaryFleetId = updatedFleets[0]?.id || 'fleet-hermes-live';
+    const liveAgent = createLiveHermesAgent(liveModel, portalSettings.connection.lastHeartbeatPingMs || 12, undefined, undefined, primaryFleetId);
     
-    setAgents([liveAgent]);
+    let updatedAgents: Agent[] = [];
+    setAgents(prev => {
+      const liveOnly = prev.filter(a => !a.isMockup && !a.id.startsWith('agent-0') && a.id !== 'hermes-prime' && a.id !== 'code-synthesizer' && a.id !== 'test-vanguard' && a.id !== 'research-oracle' && a.id !== 'citation-auditor' && a.id !== 'ops-sentry' && a.id !== 'data-weaver' && a.id !== 'security-sentinel');
+      updatedAgents = liveOnly.length > 0 ? liveOnly : [liveAgent];
+      return updatedAgents;
+    });
+
     setTasks([]);
     setArtifacts([]);
+    setActiveFleetId('all');
 
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
@@ -910,7 +1144,8 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       localStorage.setItem(MOCK_PURGED_KEY, 'true');
       localStorage.removeItem(TASKS_STORAGE_KEY);
-      localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify([liveAgent]));
+      localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify(updatedAgents.length > 0 ? updatedAgents : [liveAgent]));
+      localStorage.setItem(FLEETS_STORAGE_KEY, JSON.stringify(updatedFleets.length > 0 ? updatedFleets : [createLiveHermesFleet()]));
     } catch (e) {
       console.error('Failed to save mock purged state', e);
     }
@@ -919,10 +1154,12 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const restoreMockData = () => {
+    setFleets(INITIAL_FLEETS);
     setAgents(INITIAL_AGENTS);
     setTasks(INITIAL_TASKS);
     setArtifacts(INITIAL_ARTIFACTS);
     setEvents(INITIAL_ACTIVITY_EVENTS);
+    setActiveFleetId('fleet-alpha-core');
 
     setPortalSettings(prev => ({
       ...prev,
@@ -937,6 +1174,7 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
       localStorage.removeItem(MOCK_PURGED_KEY);
       localStorage.removeItem(TASKS_STORAGE_KEY);
       localStorage.removeItem(AGENTS_STORAGE_KEY);
+      localStorage.removeItem(FLEETS_STORAGE_KEY);
     } catch (e) {
       console.error('Failed to clear mock purged state', e);
     }
@@ -971,14 +1209,190 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const syncHermesProfilesAndFleets = async (): Promise<{
+    success: boolean;
+    discoveredProfilesCount: number;
+    discoveredFleetsCount: number;
+    message: string;
+  }> => {
+    try {
+      const serverUrl = portalSettings.connection.serverUrl;
+      const authToken = portalSettings.connection.authToken;
+      
+      const res = await fetchHermesProfilesAndFleets(serverUrl, authToken);
+      const pingMs = await testConnectionPing();
+
+      if (!res.ok && res.profiles.length === 0 && res.fleets.length === 0) {
+        // Also check if testHermesConnection returns models/skills
+        const conn = await testHermesConnection(serverUrl, authToken);
+        if (conn.ok && conn.models && conn.models.length > 0) {
+          const primaryModel = conn.models[0];
+          const cleanModelName = primaryModel.split('/').pop() || primaryModel;
+          registerHermesProfileAndFleet({
+            name: cleanModelName,
+            codename: `FLEET-${cleanModelName.toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+            description: `Auto-synced from live Hermes gateway on ${serverUrl}`,
+            modelId: primaryModel,
+            purgeMockups: true
+          });
+          return {
+            success: true,
+            discoveredProfilesCount: 1,
+            discoveredFleetsCount: 1,
+            message: `Connected live model ${primaryModel} as active Fleet & Profile!`
+          };
+        }
+
+        return {
+          success: false,
+          discoveredProfilesCount: 0,
+          discoveredFleetsCount: 0,
+          message: res.error || `No profiles/fleets returned by ${serverUrl}. You can manually register your profile with the "+ Connect Hermes Profile" button.`
+        };
+      }
+
+      let pCount = 0;
+      let fCount = 0;
+
+      // Register discovered fleets
+      const newFleetList: Fleet[] = [];
+      res.fleets.forEach(df => {
+        fCount++;
+        newFleetList.push({
+          id: df.id,
+          name: df.name,
+          codename: df.codename,
+          description: df.description || `Fleet discovered from Hermes daemon`,
+          purpose: 'Custom Swarm',
+          status: 'ACTIVE',
+          nodeCluster: 'local.hermes.daemon',
+          vramAllocated: 'Dynamic VRAM',
+          defaultModelId: df.model || portalSettings.connection.connectedAgentModel || 'hermes-agent',
+          color: '#00f2fe',
+          isLiveHermesProfile: true,
+          isMockup: false
+        });
+      });
+
+      // Register discovered profiles as agents (and fleets if not present)
+      const newAgentList: Agent[] = [];
+      res.profiles.forEach(dp => {
+        pCount++;
+        const pFleetId = dp.fleetId || (newFleetList[0]?.id) || `fleet-${dp.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+        
+        // Ensure fleet exists for this profile
+        if (!newFleetList.some(f => f.id === pFleetId)) {
+          newFleetList.push({
+            id: pFleetId,
+            name: dp.name,
+            codename: dp.codename || `FLEET-${dp.name.toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+            description: dp.description || `Profile fleet discovered from Hermes daemon: ${dp.name}`,
+            purpose: 'Core Production',
+            status: 'ACTIVE',
+            nodeCluster: 'local.hermes.daemon',
+            vramAllocated: 'Dynamic VRAM',
+            defaultModelId: dp.model || portalSettings.connection.connectedAgentModel || 'hermes-agent',
+            color: '#10b981',
+            isLiveHermesProfile: true,
+            profileName: dp.name,
+            isMockup: false
+          });
+        }
+
+        newAgentList.push({
+          id: `agent-${dp.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+          name: dp.name,
+          codename: dp.codename || `HERMES-${dp.name.toUpperCase().replace(/[^A-Z0-9]/g, '-')}`,
+          role: dp.role || dp.description || `Autonomous agent profile: ${dp.name}`,
+          fleetId: pFleetId,
+          status: 'ONLINE',
+          statusColor: 'tertiary',
+          avatarIcon: 'psychology',
+          avatarPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
+          description: dp.description || `Live Hermes profile: ${dp.name}`,
+          activeModelId: dp.model || portalSettings.connection.connectedAgentModel || 'hermes-agent',
+          latencyLabel: `${pingMs}ms • HERMES LIVE`,
+          contextUsed: 1024,
+          contextTotal: 128000,
+          uptime: 'Live',
+          slasHealth: '100% Operational',
+          memoryArchitecture: ['Live Context', 'Hermes Daemon'],
+          assignedTasks: [],
+          tools: dp.tools && dp.tools.length > 0 ? dp.tools : (dp.skills && dp.skills.length > 0 ? dp.skills : ['bash_sandbox', 'file_editor']),
+          allocationPercent: 100,
+          soulPrompt: dp.soulPrompt,
+          isLiveHermesProfile: true,
+          profileName: dp.name,
+          isMockup: false
+        });
+      });
+
+      // Purge mockups and install discovered fleets & agents
+      setFleets(prev => {
+        const liveExisting = prev.filter(f => !f.isMockup && f.id !== 'fleet-alpha-core' && f.id !== 'fleet-dev-synth' && f.id !== 'fleet-deep-oracle' && f.id !== 'fleet-sec-sentinel');
+        const merged = [...newFleetList];
+        liveExisting.forEach(ef => {
+          if (!merged.some(m => m.id === ef.id)) merged.push(ef);
+        });
+        return merged.length > 0 ? merged : [createLiveHermesFleet()];
+      });
+
+      setAgents(prev => {
+        const liveExisting = prev.filter(a => !a.isMockup && !a.id.startsWith('agent-0') && a.id !== 'hermes-prime' && a.id !== 'code-synthesizer' && a.id !== 'test-vanguard' && a.id !== 'research-oracle' && a.id !== 'citation-auditor' && a.id !== 'ops-sentry' && a.id !== 'data-weaver' && a.id !== 'security-sentinel');
+        const merged = [...newAgentList];
+        liveExisting.forEach(ea => {
+          if (!merged.some(m => m.id === ea.id)) merged.push(ea);
+        });
+        return merged.length > 0 ? merged : [createLiveHermesAgent()];
+      });
+
+      if (newFleetList.length > 0) {
+        setActiveFleetId(newFleetList[0].id);
+      }
+
+      setPortalSettings(prev => ({
+        ...prev,
+        connection: {
+          ...prev.connection,
+          connectionStatus: 'CONNECTED',
+          isLiveMode: true,
+          mockDataPurged: true,
+          lastSyncTimestamp: new Date().toISOString()
+        }
+      }));
+
+      try {
+        localStorage.setItem(MOCK_PURGED_KEY, 'true');
+      } catch {}
+
+      showToast(`Successfully synced ${pCount} profile(s) and ${fCount} fleet(s) from Hermes!`);
+      return {
+        success: true,
+        discoveredProfilesCount: pCount,
+        discoveredFleetsCount: fCount,
+        message: `Successfully imported ${pCount} profile(s) and ${fCount} fleet(s) from Hermes!`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        discoveredProfilesCount: 0,
+        discoveredFleetsCount: 0,
+        message: `Sync failed: ${err.message}`
+      };
+    }
+  };
+
   const syncWithRealHermesAgent = async (force = false): Promise<boolean> => {
     if (force) {
       const primaryModel = portalSettings.connection.connectedAgentModel || 'hermes-agent';
-      const liveAgent = createLiveHermesAgent(primaryModel, 12);
+      const liveFleet = createLiveHermesFleet('Hermes Live Swarm', 'FLEET-LIVE-HERMES', primaryModel);
+      const liveAgent = createLiveHermesAgent(primaryModel, 12, undefined, undefined, liveFleet.id);
 
+      setFleets([liveFleet]);
       setAgents([liveAgent]);
       setTasks([]);
       setArtifacts([]);
+      setActiveFleetId(liveFleet.id);
 
       const now = new Date();
       const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
@@ -1015,6 +1429,7 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
         localStorage.setItem(MOCK_PURGED_KEY, 'true');
         localStorage.removeItem(TASKS_STORAGE_KEY);
         localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify([liveAgent]));
+        localStorage.setItem(FLEETS_STORAGE_KEY, JSON.stringify([liveFleet]));
       } catch (e) {
         console.error('Failed to save live agent sync', e);
       }
@@ -1030,9 +1445,20 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     if (res.ok) {
       const primaryModel = res.models?.[0] || 'hermes-agent';
-      const liveAgent = createLiveHermesAgent(primaryModel, res.latencyMs, res.skills, res.toolsets);
+      const liveFleet = createLiveHermesFleet('Hermes Live Swarm', 'FLEET-LIVE-HERMES', primaryModel);
+      const liveAgent = createLiveHermesAgent(primaryModel, res.latencyMs, res.skills, res.toolsets, liveFleet.id);
 
-      setAgents([liveAgent]);
+      // Keep any user-created fleets, purge mockups
+      setFleets(prev => {
+        const liveOnly = prev.filter(f => !f.isMockup && f.id !== 'fleet-alpha-core' && f.id !== 'fleet-dev-synth' && f.id !== 'fleet-deep-oracle' && f.id !== 'fleet-sec-sentinel');
+        return liveOnly.length > 0 ? liveOnly : [liveFleet];
+      });
+
+      setAgents(prev => {
+        const liveOnly = prev.filter(a => !a.isMockup && !a.id.startsWith('agent-0') && a.id !== 'hermes-prime' && a.id !== 'code-synthesizer' && a.id !== 'test-vanguard' && a.id !== 'research-oracle' && a.id !== 'citation-auditor' && a.id !== 'ops-sentry' && a.id !== 'data-weaver' && a.id !== 'security-sentinel');
+        return liveOnly.length > 0 ? liveOnly : [liveAgent];
+      });
+
       setTasks([]);
       setArtifacts([]);
 
@@ -1072,10 +1498,12 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
       try {
         localStorage.setItem(MOCK_PURGED_KEY, 'true');
         localStorage.removeItem(TASKS_STORAGE_KEY);
-        localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify([liveAgent]));
       } catch (e) {
         console.error('Failed to save live agent sync', e);
       }
+
+      // Automatically attempt to discover profiles and fleets created on the daemon
+      syncHermesProfilesAndFleets().catch(() => {});
 
       showToast(`Connected & Synced with live Hermes Agent (${primaryModel})!`);
       return true;
@@ -1241,6 +1669,9 @@ export const ClusterProvider: React.FC<{ children: ReactNode }> = ({ children })
         refreshHermesModels,
         setActiveFleetId,
         createFleet,
+        deleteFleet,
+        registerHermesProfileAndFleet,
+        syncHermesProfilesAndFleets,
         setFleets,
         setArtifacts,
         addArtifact,

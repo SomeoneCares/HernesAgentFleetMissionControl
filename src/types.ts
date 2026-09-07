@@ -43,6 +43,10 @@ export interface Fleet {
   vramAllocated: string;
   defaultModelId: string;
   color: string; // Hex or theme color for badge
+  isLiveHermesProfile?: boolean;
+  profileName?: string;
+  serverUrl?: string;
+  isMockup?: boolean;
 }
 
 export interface AgentMemoryItem {
@@ -86,6 +90,9 @@ export interface Agent {
   allocationPercent: number;
   soulPrompt?: string;
   memories?: AgentMemoryItem[];
+  isLiveHermesProfile?: boolean;
+  profileName?: string;
+  isMockup?: boolean;
 }
 
 export interface ActivityEvent {

@@ -1,16 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useCluster } from '../context/ClusterContext';
-import { ChevronDown, Server, Layers, Plus, Check, Cpu, Shield, Sparkles, Activity, ArrowRightLeft, GitFork, Settings } from 'lucide-react';
+import { ChevronDown, Server, Layers, Plus, Check, Cpu, Shield, Sparkles, Activity, ArrowRightLeft, GitFork, Settings, RefreshCw, Bot, Trash2 } from 'lucide-react';
 import { CreateFleetModal } from './CreateFleetModal';
 import { FleetRoutingModal } from './FleetRoutingModal';
 import { PortalSettingsModal } from './PortalSettingsModal';
+import { ConnectHermesProfileModal } from './ConnectHermesProfileModal';
 
 export const FleetSelectorDropdown: React.FC = () => {
-  const { fleets, activeFleetId, setActiveFleetId, createFleet, agents, tasks, routingConfig } = useCluster();
+  const { 
+    fleets, 
+    activeFleetId, 
+    setActiveFleetId, 
+    createFleet, 
+    deleteFleet,
+    syncHermesProfilesAndFleets,
+    agents, 
+    tasks, 
+    routingConfig 
+  } = useCluster();
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isConnectProfileModalOpen, setIsConnectProfileModalOpen] = useState(false);
   const [isRoutingModalOpen, setIsRoutingModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isQuickSyncing, setIsQuickSyncing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close when clicking outside
@@ -95,12 +108,28 @@ export const FleetSelectorDropdown: React.FC = () => {
                   <Server className="w-3 h-3" />
                   HERMES AGENT SERVER
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300">
-                  {fleets.length} FLEETS HOSTED
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setIsQuickSyncing(true);
+                      await syncHermesProfilesAndFleets();
+                      setIsQuickSyncing(false);
+                    }}
+                    disabled={isQuickSyncing}
+                    className="px-1.5 py-0.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 flex items-center gap-1 cursor-pointer"
+                    title="Scan Hermes daemon for new fleets and profiles"
+                  >
+                    <RefreshCw className={`w-2.5 h-2.5 ${isQuickSyncing ? 'animate-spin' : ''}`} />
+                    <span>Sync</span>
+                  </button>
+                  <span className="px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300">
+                    {fleets.length} FLEETS
+                  </span>
+                </div>
               </div>
               <p className="text-[11px] text-slate-300 leading-snug">
-                Switch workload context or view aggregate swarm status across this server host.
+                Switch workload context or sync real fleets & profiles from your Hermes host.
               </p>
             </div>
 
@@ -142,19 +171,22 @@ export const FleetSelectorDropdown: React.FC = () => {
                 const stats = getFleetStats(fleet.id);
                 const isSelected = activeFleetId === fleet.id;
                 return (
-                  <button
+                  <div
                     key={fleet.id}
-                    onClick={() => {
-                      setActiveFleetId(fleet.id);
-                      setIsOpen(false);
-                    }}
-                    className={`w-full flex items-start justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                    className={`w-full flex items-start justify-between p-2.5 rounded-xl text-left transition-all group ${
                       isSelected
                         ? 'bg-cyan-500/15 border border-cyan-400/40 text-white shadow-[0_0_15px_rgba(76,215,246,0.15)]'
                         : 'hover:bg-white/[0.05] border border-white/[0.06] text-slate-300'
                     }`}
                   >
-                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveFleetId(fleet.id);
+                        setIsOpen(false);
+                      }}
+                      className="flex items-start gap-2.5 flex-1 min-w-0 text-left cursor-pointer"
+                    >
                       <div
                         className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
                         style={{ backgroundColor: fleet.color || '#00f2fe' }}
@@ -167,6 +199,16 @@ export const FleetSelectorDropdown: React.FC = () => {
                           <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/[0.08] text-slate-300 font-mono">
                             {fleet.codename}
                           </span>
+                          {fleet.isLiveHermesProfile && (
+                            <span className="text-[8px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                              LIVE HERMES
+                            </span>
+                          )}
+                          {fleet.isMockup && (
+                            <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-300/80 border border-amber-500/20 font-mono">
+                              MOCK
+                            </span>
+                          )}
                         </div>
                         <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
                           {fleet.description}
@@ -182,19 +224,49 @@ export const FleetSelectorDropdown: React.FC = () => {
                           <span className="text-cyan-300 truncate max-w-[120px]">{fleet.vramAllocated}</span>
                         </div>
                       </div>
+                    </button>
+                    
+                    <div className="flex items-center gap-1 shrink-0 ml-2 mt-0.5">
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-full bg-cyan-400/20 text-cyan-400 flex items-center justify-center">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      )}
+                      {fleets.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Delete fleet "${fleet.name}" from dashboard?`)) {
+                              deleteFleet(fleet.id);
+                            }
+                          }}
+                          className="w-5 h-5 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                          title="Delete fleet"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
-                    {isSelected && (
-                      <div className="w-5 h-5 rounded-full bg-cyan-400/20 text-cyan-400 flex items-center justify-center shrink-0 ml-2 mt-0.5">
-                        <Check className="w-3 h-3" />
-                      </div>
-                    )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
 
             {/* Bottom Actions: Partition New Fleet & Routing Rules */}
             <div className="pt-2 mt-2 border-t border-white/[0.08] flex flex-col gap-1.5">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsConnectProfileModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 border border-cyan-400/40 text-cyan-200 text-xs font-bold transition-all cursor-pointer shadow-[0_0_15px_rgba(76,215,246,0.15)]"
+                type="button"
+              >
+                <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                <span>+ Connect Hermes Profile / Fleet</span>
+              </button>
+
               <button
                 onClick={() => {
                   setIsOpen(false);
@@ -242,6 +314,12 @@ export const FleetSelectorDropdown: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal for connecting real Hermes profile & fleet */}
+      <ConnectHermesProfileModal
+        isOpen={isConnectProfileModalOpen}
+        onClose={() => setIsConnectProfileModalOpen(false)}
+      />
 
       {/* Modal for creating a new fleet */}
       <CreateFleetModal

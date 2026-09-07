@@ -7,6 +7,7 @@ import { sendHermesChatCompletion } from '../services/hermesAgentService';
 import { AgentThoughtViewer } from './AgentThoughtViewer';
 import { AgentActivityStepsViewer, LiveAgentWorkingHUD, LiveAgentActivityState } from './AgentActivityCard';
 import { ToolExecutionViewer } from './ToolExecutionViewer';
+import { ConnectHermesProfileModal } from './ConnectHermesProfileModal';
 import { 
   Send, 
   Paperclip, 
@@ -38,7 +39,11 @@ import {
   Brain,
   Wrench,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Bot,
+  Layers,
+  ChevronDown
 } from 'lucide-react';
 
 const CHAT_SESSIONS_STORAGE_KEY = 'hermes_chat_sessions_v2';
@@ -46,14 +51,30 @@ const CHAT_DRAFTS_STORAGE_KEY = 'hermes_chat_drafts_v2';
 const CHAT_ACTIVE_THREAD_KEY = 'hermes_chat_active_thread_v2';
 
 export const ChatTab: React.FC = () => {
-  const { agents, activeFleet, portalSettings, availableModels } = useCluster();
+  const { 
+    agents, 
+    fleets, 
+    activeFleetId, 
+    setActiveFleetId, 
+    activeFleet, 
+    portalSettings, 
+    availableModels,
+    syncHermesProfilesAndFleets
+  } = useCluster();
+
+  const [isConnectProfileOpen, setIsConnectProfileOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [sidebarFleetFilter, setSidebarFleetFilter] = useState<'all' | string>('all');
 
   // Active thread selection with persistence
   const [activeThread, setActiveThread] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(CHAT_ACTIVE_THREAD_KEY);
-      if (saved) return saved;
+      if (saved && agents.some(a => a.id === saved)) return saved;
     } catch {}
+    // Prefer real live Hermes profile agent if registered
+    const liveAgent = agents.find(a => a.isLiveHermesProfile);
+    if (liveAgent) return liveAgent.id;
     return agents[0]?.id || 'hermes-live-gateway';
   });
 
@@ -669,15 +690,61 @@ export const ChatTab: React.FC = () => {
       {/* 1. LEFT SIDEBAR (CHANNELS & ACTIVE AGENTS) */}
       <aside className="w-72 sm:w-80 border-r border-white/[0.08] bg-[#07090e]/70 flex flex-col shrink-0">
         {/* Sidebar Header & Search */}
-        <div className="p-4 border-b border-white/[0.06] space-y-3">
+        <div className="p-4 border-b border-white/[0.06] space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="font-bold text-white tracking-wide text-xs uppercase flex items-center gap-2">
               <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
               COMMS & AGENT BUS
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 font-bold">
-              14 CHANNELS
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsSyncing(true);
+                  await syncHermesProfilesAndFleets();
+                  setIsSyncing(false);
+                }}
+                disabled={isSyncing}
+                className="px-1.5 py-0.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-[9px] flex items-center gap-1 cursor-pointer"
+                title="Sync profiles and fleets from Hermes daemon"
+              >
+                <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>Sync</span>
+              </button>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 font-bold">
+                {agents.length} AGENTS
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Connect Hermes Profile / Fleet Button */}
+          <button
+            type="button"
+            onClick={() => setIsConnectProfileOpen(true)}
+            className="w-full py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-cyan-500/15 to-emerald-500/15 hover:from-cyan-500/25 hover:to-emerald-500/25 border border-cyan-400/30 text-cyan-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+          >
+            <Bot className="w-3.5 h-3.5 text-cyan-400" />
+            <span>+ Connect Hermes Profile</span>
+          </button>
+
+          {/* Fleet Selector Filter in Chat */}
+          <div className="flex items-center justify-between gap-1.5 p-1 rounded-lg bg-black/40 border border-white/[0.06]">
+            <span className="text-[10px] text-slate-400 pl-1.5 flex items-center gap-1">
+              <Layers className="w-3 h-3 text-cyan-400" />
+              Fleet:
             </span>
+            <select
+              value={sidebarFleetFilter}
+              onChange={(e) => setSidebarFleetFilter(e.target.value)}
+              className="bg-transparent text-slate-200 text-[10px] font-mono focus:outline-none cursor-pointer pr-1 text-right max-w-[150px] truncate"
+            >
+              <option value="all" className="bg-[#0c101a] text-white">All Fleets ({fleets.length})</option>
+              {fleets.map(f => (
+                <option key={f.id} value={f.id} className="bg-[#0c101a] text-white">
+                  {f.isLiveHermesProfile ? '● ' : ''}{f.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="relative">
@@ -687,24 +754,13 @@ export const ChatTab: React.FC = () => {
               className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/40"
             />
           </div>
-
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 text-[10px]">
-            <button className="px-2.5 py-1 rounded-md bg-cyan-400/15 text-cyan-300 font-semibold border border-cyan-400/30">
-              All
-            </button>
-            <button className="px-2.5 py-1 rounded-md bg-white/[0.02] text-slate-400 hover:text-white">
-              Agents ({agents.length})
-            </button>
-            <button className="px-2.5 py-1 rounded-md bg-white/[0.02] text-slate-400 hover:text-white">
-              Ops Logs
-            </button>
-          </div>
         </div>
 
         {/* Dynamic Channels / Agents List */}
         <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03] p-2 space-y-1">
-          {agents.map((ag) => {
+          {agents
+            .filter(ag => sidebarFleetFilter === 'all' || (ag.fleetId || 'fleet-alpha-core') === sidebarFleetFilter)
+            .map((ag) => {
             const isSelected = activeThread === ag.id;
             return (
               <button
@@ -736,14 +792,22 @@ export const ChatTab: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-bold text-xs text-white truncate">{ag.name}</span>
+                    <span className="font-bold text-xs text-white truncate flex items-center gap-1">
+                      {ag.name}
+                    </span>
                     <span className="text-[10px] text-slate-500">{ag.latencyLabel?.split('•')[0] || '12ms'}</span>
                   </div>
                   <p className="text-[11px] text-slate-400 truncate">{ag.description || ag.role}</p>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-400/10 text-cyan-300 truncate max-w-[120px]">
-                      {ag.role?.split('.')[0] || ag.codename}
-                    </span>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {ag.isLiveHermesProfile ? (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-300 font-bold border border-emerald-400/30">
+                        LIVE HERMES
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-400/10 text-cyan-300 truncate max-w-[120px]">
+                        {ag.role?.split('.')[0] || ag.codename}
+                      </span>
+                    )}
                     <span className="text-[9px] text-emerald-400">{ag.status}</span>
                   </div>
                 </div>
@@ -789,6 +853,12 @@ export const ChatTab: React.FC = () => {
                 <h3 className="font-bold text-white text-xs">
                   {currentAgent?.name || (portalSettings.connection.mockDataPurged ? 'Hermes Agent (Live)' : 'Hermes Prime Orchestrator')}
                 </h3>
+                {currentAgent?.isLiveHermesProfile && (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 font-bold border border-emerald-400/40 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE HERMES
+                  </span>
+                )}
                 <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
                   portalSettings.connection.mockDataPurged
                     ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/30'
@@ -822,6 +892,23 @@ export const ChatTab: React.FC = () => {
               </select>
             </div>
 
+            {/* Toggle Thinking Stream Button (Prominent User Control) */}
+            <button
+              onClick={() => setGlobalShowThinking(prev => !prev)}
+              className={`px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 transition-all border cursor-pointer ${
+                globalShowThinking
+                  ? 'bg-purple-500/20 text-purple-200 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                  : 'bg-white/[0.03] text-slate-400 border-white/[0.08] hover:text-white hover:border-white/20'
+              }`}
+              title={globalShowThinking ? "Thinking stream is visible (Click to collapse)" : "Thinking stream is hidden (Click to expand)"}
+              type="button"
+            >
+              <Brain className={`w-3.5 h-3.5 ${globalShowThinking ? 'text-purple-300 animate-pulse' : 'text-slate-400'}`} />
+              <span className="text-[11px] font-semibold">
+                Thinking: {globalShowThinking ? 'Visible (ON)' : 'Hidden (OFF)'}
+              </span>
+            </button>
+
             {/* Start WebRTC Video Call */}
             <button
               onClick={() => setIsWebRtcOpen(true)}
@@ -831,23 +918,6 @@ export const ChatTab: React.FC = () => {
             >
               <Video className="w-3.5 h-3.5" />
               <span>WebRTC Call</span>
-            </button>
-
-            {/* Toggle Thinking Stream Button */}
-            <button
-              onClick={() => setGlobalShowThinking(prev => !prev)}
-              className={`px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all border cursor-pointer ${
-                globalShowThinking
-                  ? 'bg-purple-500/20 text-purple-200 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
-                  : 'bg-white/[0.03] text-slate-400 border-white/[0.08] hover:text-white'
-              }`}
-              title={globalShowThinking ? "Thinking stream is visible (Click to collapse)" : "Thinking stream is hidden (Click to expand)"}
-              type="button"
-            >
-              <Brain className="w-3.5 h-3.5 text-purple-400" />
-              <span className="text-[11px] font-medium hidden sm:inline">
-                Thinking: {globalShowThinking ? 'Visible' : 'Hidden'}
-              </span>
             </button>
 
             {/* New Session / Flush Context Button */}
@@ -1378,6 +1448,12 @@ export const ChatTab: React.FC = () => {
         agentCodename={currentAgent?.codename || 'Orchestrator-01'}
         agentPhoto={currentAgent?.avatarPhoto}
         fleetName={activeFleet?.name || 'Alpha Core Fleet'}
+      />
+
+      {/* Connect Hermes Profile & Fleet Modal */}
+      <ConnectHermesProfileModal
+        isOpen={isConnectProfileOpen}
+        onClose={() => setIsConnectProfileOpen(false)}
       />
     </div>
   );
