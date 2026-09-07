@@ -279,12 +279,12 @@ export async function sendHermesChatCompletion(
     let thought = choice?.message?.reasoning_content || choice?.message?.thought || choice?.message?.reasoning || '';
     const toolCalls = choice?.message?.tool_calls;
 
-    // Parse <think>...</think> tags if present in model text
-    if (!thought && typeof rawContent === 'string' && rawContent.includes('<think>')) {
-      const thinkMatch = rawContent.match(/<think>([\s\S]*?)<\/think>/i);
+    // Parse <think>...</think>, <thought>...</thought>, <reasoning>...</reasoning> tags
+    if (!thought && typeof rawContent === 'string') {
+      const thinkMatch = rawContent.match(/<(?:think|thought|reasoning)>([\s\S]*?)(?:<\/(?:think|thought|reasoning)>|$)/i);
       if (thinkMatch) {
         thought = thinkMatch[1].trim();
-        rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+        rawContent = rawContent.replace(/<(?:think|thought|reasoning)>[\s\S]*?(?:<\/(?:think|thought|reasoning)>|$)/i, '').trim();
       }
     }
 

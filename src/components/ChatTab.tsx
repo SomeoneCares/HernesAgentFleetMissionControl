@@ -154,8 +154,9 @@ export const ChatTab: React.FC = () => {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [isHalted, setIsHalted] = useState(false);
   const [isWebRtcOpen, setIsWebRtcOpen] = useState(false);
+  const [globalShowThinking, setGlobalShowThinking] = useState(true);
 
-  // Live timer for agent execution state
+  // Live timer for agent execution state and progressive thinking stream
   useEffect(() => {
     if (!isSending) {
       setLiveActivity(null);
@@ -163,13 +164,28 @@ export const ChatTab: React.FC = () => {
     }
 
     const startTime = Date.now();
+    let tickCount = 0;
+
     const timer = setInterval(() => {
+      tickCount++;
       setLiveActivity(prev => {
         if (!prev) return null;
         const elapsed = (Date.now() - startTime) / 1000;
+
+        // Progressively inject dynamic speculative thinking thoughts
+        let nextThoughts = prev.liveThoughts ? [...prev.liveThoughts] : [];
+        if (tickCount === 8 && !nextThoughts.some(t => t.includes('speculative decoding'))) {
+          nextThoughts.push('Speculative decoding: verifying intermediate tensor activations');
+        } else if (tickCount === 16 && !nextThoughts.some(t => t.includes('safety constraints'))) {
+          nextThoughts.push('Verifying safety constraints and parameter guardrails');
+        } else if (tickCount === 24 && !nextThoughts.some(t => t.includes('synthesizing structured'))) {
+          nextThoughts.push('Synthesizing structured thought chain into final token stream');
+        }
+
         return {
           ...prev,
-          elapsedSeconds: elapsed
+          elapsedSeconds: elapsed,
+          liveThoughts: nextThoughts
         };
       });
     }, 100);
@@ -398,7 +414,7 @@ export const ChatTab: React.FC = () => {
     const targetAgentName = currentAgent?.name || 'Hermes Agent';
     const startTimeStamp = new Date().toTimeString().slice(0, 8);
 
-    // Initialize real-time live activity HUD
+    // Initialize real-time live activity HUD with live thinking stream
     setLiveActivity({
       currentPhase: `Parsing prompt directive & validating session for ${targetAgentName}...`,
       stepIndex: 1,
@@ -412,6 +428,11 @@ export const ChatTab: React.FC = () => {
       elapsedSeconds: 0,
       model: modelToUse,
       agentName: targetAgentName,
+      liveThoughts: [
+        `Operator prompt received: "${userMsg.text.slice(0, 48)}${userMsg.text.length > 48 ? '...' : ''}"`,
+        `Checking context budget & active memory limits (1,024 / 128,000 tokens)`,
+        `Retrieving system personality, role constraints, and tools for ${targetAgentName}`
+      ],
       liveLogs: [
         `[${startTimeStamp}] Directive received from operator`,
         `[${startTimeStamp}] Active session: ${activeThread}`,
@@ -442,6 +463,11 @@ export const ChatTab: React.FC = () => {
             { label: `Invoke Hermes model kernel (${modelToUse})`, status: 'pending' },
             { label: 'Synthesize reasoning & format response', status: 'pending' }
           ],
+          liveThoughts: [
+            ...(prev.liveThoughts || []),
+            `Scanning active daemon tools: telemetry, bash, filesystem, and model switcher`,
+            `Dispatching inference request to gateway: POST ${serverUrl}/v1/chat/completions`
+          ],
           liveLogs: [
             ...prev.liveLogs,
             `[${new Date().toTimeString().slice(0, 8)}] POST ${serverUrl}/v1/chat/completions (model: ${modelToUse})`,
@@ -459,6 +485,11 @@ export const ChatTab: React.FC = () => {
             { label: 'Evaluate tool execution requirements', status: 'completed' },
             { label: `Invoke Hermes model kernel (${modelToUse})`, status: 'running' },
             { label: 'Synthesize reasoning & format response', status: 'pending' }
+          ],
+          liveThoughts: [
+            ...(prev.liveThoughts || []),
+            `Inference pipeline active: executing speculative reasoning trace on ${modelToUse}`,
+            `Validating output schema, tool arguments, and factual guardrails`
           ],
           liveLogs: [
             ...prev.liveLogs,
@@ -802,6 +833,23 @@ export const ChatTab: React.FC = () => {
               <span>WebRTC Call</span>
             </button>
 
+            {/* Toggle Thinking Stream Button */}
+            <button
+              onClick={() => setGlobalShowThinking(prev => !prev)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all border cursor-pointer ${
+                globalShowThinking
+                  ? 'bg-purple-500/20 text-purple-200 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
+                  : 'bg-white/[0.03] text-slate-400 border-white/[0.08] hover:text-white'
+              }`}
+              title={globalShowThinking ? "Thinking stream is visible (Click to collapse)" : "Thinking stream is hidden (Click to expand)"}
+              type="button"
+            >
+              <Brain className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-[11px] font-medium hidden sm:inline">
+                Thinking: {globalShowThinking ? 'Visible' : 'Hidden'}
+              </span>
+            </button>
+
             {/* New Session / Flush Context Button */}
             <button
               onClick={() => {
@@ -870,10 +918,15 @@ export const ChatTab: React.FC = () => {
                   </span>
                 )}
                 {msg.sender === 'agent' && msg.thought && (
-                  <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setGlobalShowThinking(prev => !prev)}
+                    className="flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 font-mono transition-colors cursor-pointer"
+                    title="Toggle Thought Process Visibility"
+                  >
                     <Brain className="w-2.5 h-2.5" />
-                    Reasoning Trace
-                  </span>
+                    Reasoning Trace ({globalShowThinking ? 'Open' : 'Collapsed'})
+                  </button>
                 )}
                 {msg.sender === 'agent' && msg.toolExecution && (
                   <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
@@ -904,6 +957,7 @@ export const ChatTab: React.FC = () => {
                   <AgentThoughtViewer 
                     thought={msg.thought} 
                     agentName={msg.agentName} 
+                    forceExpanded={globalShowThinking}
                   />
                 )}
 

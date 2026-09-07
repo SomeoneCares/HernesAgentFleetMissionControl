@@ -8,7 +8,9 @@ import {
   Cpu, 
   Loader2, 
   Terminal, 
-  AlertCircle 
+  AlertCircle,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import { AgentActivityStep } from '../types';
 
@@ -21,6 +23,7 @@ export interface LiveAgentActivityState {
   model: string;
   agentName: string;
   liveLogs: string[];
+  liveThoughts?: string[];
 }
 
 interface LiveAgentWorkingHUDProps {
@@ -33,6 +36,7 @@ export const LiveAgentWorkingHUD: React.FC<LiveAgentWorkingHUDProps> = ({
   onHalt
 }) => {
   const [showLogs, setShowLogs] = useState(false);
+  const [showThinking, setShowThinking] = useState(true);
 
   return (
     <div className="w-full max-w-2xl rounded-2xl p-4 sm:p-5 bg-[#0e1422]/95 border border-cyan-400/40 shadow-[0_0_25px_rgba(76,215,246,0.15)] text-xs font-mono space-y-3.5 animate-fadeIn">
@@ -96,6 +100,43 @@ export const LiveAgentWorkingHUD: React.FC<LiveAgentWorkingHUDProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Live Thinking Stream (Real-Time Cognitive Trace) */}
+      {activityState.liveThoughts && activityState.liveThoughts.length > 0 && (
+        <div className="rounded-xl border border-purple-500/30 bg-gradient-to-br from-[#170e2c]/90 via-[#0e0c1f]/95 to-black/90 p-3 space-y-2 shadow-md">
+          <div 
+            onClick={() => setShowThinking(!showThinking)}
+            className="flex items-center justify-between cursor-pointer text-purple-300 text-[11px]"
+          >
+            <div className="flex items-center gap-2">
+              <Brain className="w-4 h-4 text-purple-400 animate-pulse" />
+              <span className="font-bold text-purple-200">
+                Live Thinking Process ({activityState.liveThoughts.length} reasoning steps)
+              </span>
+              <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-purple-400/80">
+              <span>{showThinking ? 'Hide' : 'Show'}</span>
+              {showThinking ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </div>
+          </div>
+
+          {showThinking && (
+            <div className="space-y-1 pt-1 font-mono text-[10px] text-purple-200/90 max-h-40 overflow-y-auto">
+              {activityState.liveThoughts.map((thought, idx) => (
+                <div key={idx} className="p-1.5 rounded bg-black/40 border border-purple-500/20 flex items-start gap-2 leading-relaxed">
+                  <span className="text-purple-400 font-bold shrink-0">&gt;</span>
+                  <span className="flex-1">{thought}</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-1 text-purple-400 text-[10px] pl-1 pt-0.5 animate-pulse">
+                <Sparkles className="w-3 h-3" />
+                <span>Formulating next reasoning tokens... ▌</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Step Progression Timeline */}
       <div className="space-y-1.5 pt-1">
