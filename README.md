@@ -10,7 +10,7 @@
 
 **A cybernetic command portal for orchestrating, monitoring, and debugging distributed autonomous AI agent fleets.**
 
-[Features](#-key-features) • [Screenshots](#-visual-walkthrough) • [Real Agent Setup Guide](./HERMES_CONNECTION_GUIDE.md) • [Portal Branding](#-portal-branding--white-labeling) • [Plugin Ecosystem](#-plugin--extension-ecosystem) • [Quickstart](#-quickstart)
+[Features](#-key-features) • [Detailed Feature & System Guide](./FEATURES.md) • [Screenshots](#-visual-walkthrough) • [Real Agent Setup Guide](./HERMES_CONNECTION_GUIDE.md) • [Portal Branding](#-portal-branding--white-labeling) • [Plugin Ecosystem](#-plugin--extension-ecosystem) • [Quickstart](#-quickstart)
 
 </div>
 
